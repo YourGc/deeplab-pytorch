@@ -1,6 +1,3 @@
-# ----------------------------------------
-# Written by Yude Wang
-# ----------------------------------------
 
 import numpy as np
 import torch 
@@ -8,10 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
 from torchvision import models
-import net.resnet_atrous as atrousnet
-import net.xception as xception
+import lib.net.resnet_atrous as atrousnet
+import lib.net.xception as xception
 
-def build_backbone(backbone_name, pretrained=True, os=16):
+def build_backbone(backbone_name, pretrained=False, os=16):
 	if backbone_name == 'res50_atrous':
 		net = atrousnet.resnet50_atrous(pretrained=pretrained, os=os)
 		return net

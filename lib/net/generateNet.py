@@ -4,7 +4,7 @@
 
 import torch
 import torch.nn as nn
-from net.deeplabv3plus import deeplabv3plus
+from lib.net.deeplabv3plus import deeplabv3plus
 # from net.supernet import SuperNet
 # from net.EANet import EANet
 # from net.DANet import DANet

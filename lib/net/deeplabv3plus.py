@@ -1,15 +1,12 @@
-# ----------------------------------------
-# Written by Yude Wang
-# ----------------------------------------
 
 import numpy as np
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
-from net.sync_batchnorm import SynchronizedBatchNorm2d
+from lib.net.sync_batchnorm import SynchronizedBatchNorm2d
 from torch.nn import init
-from net.backbone import build_backbone
-from net.ASPP import ASPP
+from lib.net.backbone import build_backbone
+from lib.net.ASPP import ASPP
 
 class deeplabv3plus(nn.Module):
 	def __init__(self, cfg):

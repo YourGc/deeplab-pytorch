@@ -1,12 +1,9 @@
-# ----------------------------------------
-# Written by Yude Wang
-# ----------------------------------------
 
 import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from net.sync_batchnorm import SynchronizedBatchNorm2d
+from lib.net.sync_batchnorm import SynchronizedBatchNorm2d
 
 class ASPP(nn.Module):
 	

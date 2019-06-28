@@ -1,6 +1,3 @@
-# ----------------------------------------
-# Written by Yude Wang
-# ----------------------------------------
 
 from __future__ import print_function, division
 import os

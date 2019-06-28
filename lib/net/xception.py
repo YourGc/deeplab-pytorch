@@ -19,13 +19,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 from torch.nn import init
-from net.sync_batchnorm import SynchronizedBatchNorm2d
+from lib.net.sync_batchnorm import SynchronizedBatchNorm2d
 
 bn_mom = 0.0003
 __all__ = ['xception']
 
 model_urls = {
-    'xception': '/home/wangyude/.torch/models/xception_pytorch_imagenet.pth'#'http://data.lip6.fr/cadene/pretrainedmodels/xception-b5690688.pth'
+    'xception': r'/home/lab310/ygc/deeplab/model/xception-b5690688.pth'
 }
 
 class SeparableConv2d(nn.Module):

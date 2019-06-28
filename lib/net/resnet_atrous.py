@@ -1,7 +1,7 @@
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
-from net.sync_batchnorm import SynchronizedBatchNorm2d
+from lib.net.sync_batchnorm import SynchronizedBatchNorm2d
 
 bn_mom = 0.0003
 model_urls = {
