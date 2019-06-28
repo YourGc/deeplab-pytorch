@@ -81,6 +81,41 @@ class DataSet(Dataset):
     def __len__(self):
         return len(self.files)
 
+class Test_DataSet(Dataset):
+    def __init__(self,cfg,idx,root = './data'):
+        super(Dataset,self).__init__()
+        self.img_path = root + r'/test/' + str(idx)
+        self.imgs = os.listdir(self.img_path)
+        self.cfg = cfg
+        self.test_aug = iaa.Rot90
+
+    def load_file(self):
+        files = os.listdir(self.img_path)
+        imgs =[]
+        for file in files:
+            sub_file = os.path.join(self.img_path,file)
+            sub_imgs = os.listdir(sub_file)
+            imgs.append(sub_imgs)
+        return imgs
+
+    def __getitem__(self, index):
+        img = self.imgs[index]
+        imgs = self.test_time_aug(img)
+        return imgs
+
+    def test_time_aug(self,img):
+        # rotation three times (90,180,270) + original = 4 times predict
+        # compute average as ensemble
+        imgs = [img]
+        rotations = [1,2,3]
+        for rotation in rotations:
+            imgs.append(self.test_aug(k=rotation,keep_size=True)(img))
+
+        return imgs
+
+    def __len__(self):
+        return len(self.imgs)
+
 if __name__ == '__main__':
     train_cumtom_dataset = DataSet(pharse='train', cfg=cfg)
     train_dataloader = DataLoader(dataset=train_cumtom_dataset,

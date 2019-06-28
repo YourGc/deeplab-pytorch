@@ -22,6 +22,7 @@ from tensorboardX import SummaryWriter
 
 esp = 1e-8
 torch.backends.cudnn.benchmark = True
+
 def train_net():
 	train_cumtom_dataset = DataSet(pharse='train',cfg=cfg)
 	train_dataloader = DataLoader(dataset=train_cumtom_dataset,
@@ -71,7 +72,7 @@ def train_net():
 	)
 	#scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN_LR_MST, gamma=cfg.TRAIN_LR_GAMMA, last_epoch=-1)
 	# itr = cfg.TRAIN_MINEPOCH * len(dataloader)
-	# max_itr = cfg.TRAIN_EPOCHS*len(dataloader)
+	# max_itr = cfg.TRAIN_EPOCHS * len(dataloader)
 	running_loss = 0.0
 
 	tblogger = SummaryWriter()
