@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="lab310@10.80.107.169:22">
+    <serverData>
+      <paths name="lab310@10.80.107.169:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/lab310/ygc/deeplab" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>
