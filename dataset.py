@@ -2,7 +2,7 @@
 from torch.utils.data import DataLoader,Dataset
 import os
 from config import cfg
-import skimage.io as io
+from skimage import io, transform
 import random
 import numpy as np
 from imgaug import augmenters as iaa
@@ -87,7 +87,7 @@ class Test_DataSet(Dataset):
         self.img_path = root + r'/test/' + str(idx)
         self.imgs = os.listdir(self.img_path)
         self.cfg = cfg
-        self.test_aug = iaa.Rot90
+        # self.test_aug = iaa.Rot90(k=1)
 
     def load_file(self):
         files = os.listdir(self.img_path)
@@ -99,9 +99,12 @@ class Test_DataSet(Dataset):
         return imgs
 
     def __getitem__(self, index):
-        img = self.imgs[index]
+        img_name = self.imgs[index]
+        img = io.imread(os.path.join(self.img_path,img_name))
         imgs = self.test_time_aug(img)
-        return imgs
+        imgs = [np.array(img)for img in imgs]
+        imgs = [np.transpose(img,(2,1,0)) for img in imgs]
+        return imgs,img_name
 
     def test_time_aug(self,img):
         # rotation three times (90,180,270) + original = 4 times predict
@@ -109,7 +112,7 @@ class Test_DataSet(Dataset):
         imgs = [img]
         rotations = [1,2,3]
         for rotation in rotations:
-            imgs.append(self.test_aug(k=rotation,keep_size=True)(img))
+            imgs.append(transform.rotate(img,90 * rotation))
 
         return imgs
 

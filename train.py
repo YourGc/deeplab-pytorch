@@ -63,12 +63,18 @@ def train_net():
 		# net.load_state_dict(torch.load(cfg.TRAIN_CKPT),False)
 	
 	criterion = MaskLoss()
+	# optimizer = optim.SGD(
+	# 	params = [
+	# 		{'params': get_params(net.module,key='1x'), 'lr': cfg.TRAIN_LR},
+	# 		{'params': get_params(net.module,key='10x'), 'lr': 10*cfg.TRAIN_LR}
+	# 	],
+	# 	momentum=cfg.TRAIN_MOMENTUM
+	# )
 	optimizer = optim.SGD(
-		params = [
-			{'params': get_params(net.module,key='1x'), 'lr': cfg.TRAIN_LR},
-			{'params': get_params(net.module,key='10x'), 'lr': 10*cfg.TRAIN_LR}
-		],
-		momentum=cfg.TRAIN_MOMENTUM
+		lr=cfg.TRAIN_LR,
+		params = net.parameters(),
+		momentum=cfg.TRAIN_MOMENTUM,
+		weight_decay=cfg.TRAIN_WEIGHT_DECAY
 	)
 	#scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN_LR_MST, gamma=cfg.TRAIN_LR_GAMMA, last_epoch=-1)
 	# itr = cfg.TRAIN_MINEPOCH * len(dataloader)
@@ -103,11 +109,10 @@ def train_net():
 					now_lr, running_loss / (i+1) , avaliable_ious[1]/avaliable_count[1], avaliable_ious[2]/avaliable_count[2]
 					 , avaliable_ious[3] / avaliable_count[3]))
 
-		tblogger.add_scalar('loss/train', running_loss, epoch)
-		tblogger.add_scalar('lr/train', now_lr, epoch)
-		tblogger.add_scalar('Bsomke/train', avaliable_ious[1]/avaliable_count[1], epoch)
-		tblogger.add_scalar('Corn/train', avaliable_ious[2]/avaliable_count[2], epoch)
-		tblogger.add_scalar('Brice/train', avaliable_ious[3]/avaliable_count[3], epoch)
+		tblogger.add_scalar('loss', {'val':running_loss}, epoch)
+		tblogger.add_scalar('Bsomke', {'val':avaliable_ious[1]/avaliable_count[1]}, epoch)
+		tblogger.add_scalar('Corn', {'val':avaliable_ious[2]/avaliable_count[2]}, epoch)
+		tblogger.add_scalar('Brice', {'val':avaliable_ious[3]/avaliable_count[3]}, epoch)
 
 		running_loss = 0.0
 			
@@ -142,10 +147,10 @@ def eval(net,dataloader,criterion,logger,epoch):
 
 			val_loss += loss.item()
 
-		logger.add_scalar('loss/val', val_loss, epoch)
-		logger.add_scalar('Bsmoke/val', val_ious[1]/val_count[1], epoch)
-		logger.add_scalar('Corn/val', val_ious[2]/val_count[2], epoch)
-		logger.add_scalar('Brice/val', val_ious[3]/val_count[3], epoch)
+		logger.add_scalar('loss', {'val':val_loss}, epoch)
+		logger.add_scalar('Bsmoke', {'val':val_ious[1]/val_count[1]}, epoch)
+		logger.add_scalar('Corn', {'val':val_ious[2]/val_count[2]}, epoch)
+		logger.add_scalar('Brice', {'val':val_ious[3]/val_count[3]}, epoch)
 	print('loss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}'.format(
 		val_loss/len(dataloader), val_ious[1] / val_count[1], val_ious[2] / val_count[2]
 		, val_ious[3] / val_count[3]))
@@ -178,8 +183,9 @@ def compute_iou(output,target,counts,ious,num = cfg.MODEL_NUM_CLASSES):
 def adjust_lr(optimizer, epoch, max_epoch = cfg.TRAIN_EPOCHS):
 	now_lr = cfg.TRAIN_LR * (1 - epoch/(max_epoch+1)) ** cfg.TRAIN_POWER
 	optimizer.param_groups[0]['lr'] = now_lr
-	optimizer.param_groups[1]['lr'] = 10*now_lr
+	# optimizer.param_groups[1]['lr'] = now_lr * 10
 	return now_lr
+
 
 def get_params(model, key):
 	for m in model.named_modules():

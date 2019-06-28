@@ -14,6 +14,7 @@ class Configuration():
 		self.DATA_NAME = 'VOC2012'
 		self.DATA_AUG = True
 		self.DATA_WORKERS = 8
+		self.DATA_SIZE = 512
 		self.DATA_RESCALE = 512
 		self.DATA_RANDOMCROP = 512
 		self.DATA_RANDOMROTATION = 0
@@ -37,7 +38,7 @@ class Configuration():
 		self.TRAIN_LR = 0.01
 		self.TRAIN_LR_GAMMA = 0.1
 		self.TRAIN_MOMENTUM = 0.9
-		self.TRAIN_WEIGHT_DECAY = 0.00004
+		self.TRAIN_WEIGHT_DECAY = 0.0001
 		self.TRAIN_BN_MOM = 0.0003
 		self.TRAIN_POWER = 0.9
 		self.TRAIN_GPUS = 4
