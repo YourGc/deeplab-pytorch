@@ -65,11 +65,14 @@ def test_net(args):
 
 			for imgs,name in tqdm.tqdm(test_dataloader):
 				results = []
-				for img in imgs:
-					img = Variable(img).float().cuda()
-					output = net(img)
-					results.append(output.squeeze())
-				result = AverageResult(results)#.detach().cpu().numpy()
+				# for img in imgs:
+				# 	img = Variable(img).float().cuda()
+				# 	output = net(img)
+				# 	results.append(output.squeeze())
+				# result = AverageResult(results)#.detach().cpu().numpy()
+				img = Variable(imgs).float().cuda()
+				output = net(img)
+				result = output.squeeze().detach().cpu().numpy()
 				#result.tofile(os.path.join(args.save_dir,str(idx) + '_tmp',name[0].strip('jpg') + 'npy'))
 				# print(result.shape,mask.shape)
 				w_idx,h_idx = str(name[0]).strip('.jpg').split('_')
@@ -77,18 +80,18 @@ def test_net(args):
 				mask[:,w_idx * STRIDE:w_idx * STRIDE + SIZE ,h_idx * STRIDE:h_idx * STRIDE+SIZE] = \
 					mask[:, w_idx * STRIDE:w_idx * STRIDE + SIZE, h_idx * STRIDE:h_idx * STRIDE + SIZE] + \
 					result
-
+			del test_dataloader
+			del test_dataset
 			#fix mask 取均值防止重复计算
 			mask[:,STRIDE:-STRIDE,:] /=2
 			mask[:,:,STRIDE:-STRIDE] /= 2
 			mask = mask[:,w_pad[0] : -w_pad[1],h_pad[0]:-h_pad[1]]
 			#通道整合
-			mask.tofile('mask.npy')# 以防万一
+			# mask.tofile('mask.npy')# 以防万一
 
-			C,W,H = mask.shape
-			for w in tqdm.tqdm(range(W)):
-				for h in range(H):
-					mask[0,w,h] = np.argmax(mask[:,w,h])
+			for w in tqdm.tqdm(range(max_w)):
+				for h in range(max_h):
+					mask[0,w:(w+1) * SIZE,h:(h+1)*SIZE] = np.argmax(mask[:,w:(w+1) * SIZE,h:(h+1)*SIZE],axis=0)
 
 			mask = mask[0,:,:]
 			#mask = np.argmax(mask,axis=0) 内存溢出
