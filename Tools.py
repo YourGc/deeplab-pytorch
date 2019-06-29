@@ -143,7 +143,7 @@ def padding_crop():
 
 def fix_label():
     Image.MAX_IMAGE_PIXELS = 100000000000
-    ori_path = './test/image_{}.png'
+    ori_path = './data/test/image_{}.png'
     pre_path = './result/{}.png'
 
     for i in [3,4]:
