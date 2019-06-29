@@ -141,6 +141,24 @@ def padding_crop():
                 sub_img = Image.fromarray(sub_img)
                 sub_img.save(os.path.join(test_path,str(idx+3),str(i) + '_' + str(j) + '.jpg'))
 
+def fix_label():
+    Image.MAX_IMAGE_PIXELS = 100000000000
+    ori_path = './test/image_{}.png'
+    pre_path = './result/{}.png'
+
+    for i in [3,4]:
+        ori = Image.open(ori_path.format(i))
+        ori = ori.convert('RGB')
+        ori = np.array(ori)
+        ori = np.max(ori,axis=2)
+        ori = ori==0
+
+        pre = Image.open(pre_path.format(i))
+        pre = np.array(pre)
+
+        result = pre * ori
+        result = Image.fromarray(np.uint8(result))
+        result.save('./result/fix_{}.png'.format(i))
 # def IOU(pred,target):
 #     #
 #     px1,py1,px2,py2 = pred
@@ -159,8 +177,9 @@ def padding_crop():
 
 
 if __name__ == '__main__':
-    a = np.zeros(shape=(4,20000,37000),dtype=np.float32)
-    print(a.shape)
+    fix_label()
+    # a = np.zeros(shape=(4,20000,37000),dtype=np.float32)
+    # print(a.shape)
     #padding_crop()
 
 
