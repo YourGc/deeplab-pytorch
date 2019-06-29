@@ -101,18 +101,29 @@ class Test_DataSet(Dataset):
     def __getitem__(self, index):
         img_name = self.imgs[index]
         img = io.imread(os.path.join(self.img_path,img_name))
-        img = np.array(img)
-        img = np.transpose(img,(2,1,0))
-        # imgs = self.test_time_aug(img)
-        # imgs = [np.array(img)for img in imgs]
-        # imgs = [np.transpose(img,(2,1,0)) for img in imgs]
-        return img,img_name
+        imgs = self.test_time_aug(img)
+        imgs = [np.array(img)for img in imgs]
+        imgs = [self.processing(img) for img in imgs]
+        imgs = [np.transpose(img,(2,1,0)) for img in imgs]
+        return imgs,img_name
+
+    def processing(self,img):
+        img = img / 255
+        img[:, :0] = img[:,:0] - self.cfg.DATA_MEAN[0]
+        img[:, :1] = img[:, :1] - self.cfg.DATA_MEAN[1]
+        img[:, :2] = img[:, :2] - self.cfg.DATA_MEAN[2]
+
+        img[:, :0] = img[:, :0] / self.cfg.DATA_STD[0]
+        img[:, :1] = img[:, :1] / self.cfg.DATA_STD[1]
+        img[:, :2] = img[:, :2] / self.cfg.DATA_STD[2]
+
+        return img
 
     def test_time_aug(self,img):
         # rotation three times (90,180,270) + original = 4 times predict
         # compute average as ensemble
         imgs = [img]
-        rotations = [1,2,3]
+        rotations = [2]#[1,2,3]
         for rotation in rotations:
             imgs.append(transform.rotate(img,90 * rotation))
 

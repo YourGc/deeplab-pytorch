@@ -65,14 +65,14 @@ def test_net(args):
 
 			for imgs,name in tqdm.tqdm(test_dataloader):
 				results = []
-				# for img in imgs:
-				# 	img = Variable(img).float().cuda()
-				# 	output = net(img)
-				# 	results.append(output.squeeze())
-				# result = AverageResult(results)#.detach().cpu().numpy()
-				img = Variable(imgs).float().cuda()
-				output = net(img)
-				result = output.squeeze().detach().cpu().numpy()
+				for img in imgs:
+					img = Variable(img).float().cuda()
+					output = net(img)
+					results.append(output.squeeze())
+				result = AverageResult(results)#.detach().cpu().numpy()
+				# img = Variable(imgs).float().cuda()
+				# output = net(img)
+				# result = output.squeeze().detach().cpu().numpy()
 				#result.tofile(os.path.join(args.save_dir,str(idx) + '_tmp',name[0].strip('jpg') + 'npy'))
 				# print(result.shape,mask.shape)
 				w_idx,h_idx = str(name[0]).strip('.jpg').split('_')
@@ -124,9 +124,9 @@ def AverageResult(results):
 	for i,result in enumerate(results):
 		#反转回来
 		result = result.detach().cpu().numpy()
-		final_result += np.rot90(result,i * -1,(1,2))
+		final_result += np.rot90(result,i * -2,(1,2))
 
-	return final_result/4
+	return final_result / 2
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="Test")
