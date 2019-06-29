@@ -89,13 +89,13 @@ def test_net(args):
 			#通道整合
 			# mask.tofile('mask.npy')# 以防万一
 
-			for w in tqdm.tqdm(range(max_w)):
-				for h in range(max_h):
-					mask[0,w:(w+1) * SIZE,h:(h+1)*SIZE] = np.argmax(mask[:,w:(w+1) * SIZE,h:(h+1)*SIZE],axis=0)
-
-			mask = mask[0,:,:]
-			#mask = np.argmax(mask,axis=0) 内存溢出
-			mask = Image.fromarray(mask)
+			# for w in tqdm.tqdm(range(max_w)):
+			# 	for h in range(max_h):
+			# 		mask[0,w:(w+1) * SIZE,h:(h+1)*SIZE] = np.argmax(mask[:,w:(w+1) * SIZE,h:(h+1)*SIZE],axis=0)
+			#
+			# mask = mask[0,:,:]
+			mask = np.argmax(mask,axis=0) #内存溢出
+			mask = Image.fromarray(np.uint8(mask))
 			create_dir(args.save_dir)
 			mask.save(os.path.join(args.save_dir,str(idx) + '.png'))
 # def concate(args):
