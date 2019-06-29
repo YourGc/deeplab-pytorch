@@ -10,7 +10,7 @@ class MaskLoss(nn.Module):
 		self.loss = None
 		self.alpha = 0.25
 		self.gamma = 2
-		self.weight = torch.Tensor([0.04303,0.33902,0.41242,0.20553]).cuda()
+		self.weight = [0.04303,0.33902,0.41242,0.20553]
 	def forward(self,output, mask):
 		#focal loss
 		# output = F.softmax(output,dim=1)
@@ -23,6 +23,8 @@ class MaskLoss(nn.Module):
 		pk = torch.clamp(pk, 1e-4, 1. - 1e-4).float()
 
 		out = torch.pow((1. - pk), self.gamma) * torch.log(pk)
+		for i,weight in enumerate(self.weight):
+			out[:,i,:,:] *= weight
 
 		batch_loss = -self.alpha * out.mean()
 		# print batch_loss

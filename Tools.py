@@ -130,13 +130,13 @@ def padding_crop():
             (h_pad_left,h_pad_right),
             (0,0)
         ),mode='constant',constant_values=((0,0),(0,0),(0,0)))
-        # print(img.shape)
+        print(img.shape)
 
         w_count *= SIZE/STRIDE
         h_count *= SIZE/STRIDE
         print('Croping')
-        for i in tqdm.tqdm(range(int(w_count))):
-            for j in range(int(h_count)):
+        for i in tqdm.tqdm(range(int(w_count) - 1)):
+            for j in range(int(h_count) - 1):
                 sub_img = img[i * STRIDE:i * STRIDE + SIZE,j * STRIDE:j * STRIDE + SIZE,:]
                 sub_img = Image.fromarray(sub_img)
                 sub_img.save(os.path.join(test_path,str(idx+3),str(i) + '_' + str(j) + '.jpg'))
@@ -159,7 +159,9 @@ def padding_crop():
 
 
 if __name__ == '__main__':
-    padding_crop()
+    a = np.zeros(shape=(4,20000,37000),dtype=np.float32)
+    print(a.shape)
+    #padding_crop()
 
 
 

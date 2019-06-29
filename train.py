@@ -109,10 +109,10 @@ def train_net():
 					now_lr, running_loss / (i+1) , avaliable_ious[1]/avaliable_count[1], avaliable_ious[2]/avaliable_count[2]
 					 , avaliable_ious[3] / avaliable_count[3]))
 
-		tblogger.add_scalar('loss', {'val':running_loss}, epoch)
-		tblogger.add_scalar('Bsomke', {'val':avaliable_ious[1]/avaliable_count[1]}, epoch)
-		tblogger.add_scalar('Corn', {'val':avaliable_ious[2]/avaliable_count[2]}, epoch)
-		tblogger.add_scalar('Brice', {'val':avaliable_ious[3]/avaliable_count[3]}, epoch)
+		tblogger.add_scalars('loss', {'train':running_loss / len(train_dataloader)}, epoch)
+		tblogger.add_scalars('Bsmoke', {'train':avaliable_ious[1]/avaliable_count[1]}, epoch)
+		tblogger.add_scalars('Corn', {'train':avaliable_ious[2]/avaliable_count[2]}, epoch)
+		tblogger.add_scalars('Brice', {'train':avaliable_ious[3]/avaliable_count[3]}, epoch)
 
 		running_loss = 0.0
 			
@@ -147,10 +147,10 @@ def eval(net,dataloader,criterion,logger,epoch):
 
 			val_loss += loss.item()
 
-		logger.add_scalar('loss', {'val':val_loss}, epoch)
-		logger.add_scalar('Bsmoke', {'val':val_ious[1]/val_count[1]}, epoch)
-		logger.add_scalar('Corn', {'val':val_ious[2]/val_count[2]}, epoch)
-		logger.add_scalar('Brice', {'val':val_ious[3]/val_count[3]}, epoch)
+		logger.add_scalars('loss', {'val':val_loss/len(dataloader)}, epoch)
+		logger.add_scalars('Bsmoke', {'val':val_ious[1]/val_count[1]}, epoch)
+		logger.add_scalars('Corn', {'val':val_ious[2]/val_count[2]}, epoch)
+		logger.add_scalars('Brice', {'val':val_ious[3]/val_count[3]}, epoch)
 	print('loss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}'.format(
 		val_loss/len(dataloader), val_ious[1] / val_count[1], val_ious[2] / val_count[2]
 		, val_ious[3] / val_count[3]))
