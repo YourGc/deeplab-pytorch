@@ -141,44 +141,44 @@ class RefineBlock(nn.Module):
         return out
 
 class refinenet(nn.Module):
-  def __init__(self, cfg, pretrained_backbone=False):
-    super(refinenet, self).__init__()
-    self.backbone = build_backbone(cfg.MODEL_BACKBONE, pretrained=pretrained_backbone, os=cfg.MODEL_OUTPUT_STRIDE)
-    self.in_planes = [64, 256, 512, 1024, 2048]
-    self.feature = 256
-    #self.number_classes = cfg.MODEL_NUM_CLASSES  
-    
-    self.adj4 = nn.Conv2d(self.in_planes[4], 512,kernel_size=1)
-    self.adj3 = nn.Conv2d(self.in_planes[3], 256,kernel_size=1)
-    self.adj2 = nn.Conv2d(self.in_planes[2], 256,kernel_size=1)
-    self.adj1 = nn.Conv2d(self.in_planes[1], 256,kernel_size=1)
-    
-    self.RefineBlock4 = RefineBlock(out_channels=512, Low_input=512, High_input=0)
-    self.RefineBlock3 = RefineBlock(out_channels=256, Low_input=256, High_input=512)
-    self.RefineBlock2 = RefineBlock(out_channels=256, Low_input=256, High_input=256)
-    self.RefineBlock1 = RefineBlock(out_channels=256, Low_input=256, High_input=256)
-    self.UpBr1 = nn.Sequential(nn.UpsamplingBilinear2d(scale_factor=2),
-                               #ConvUpscaleBlock(self.feature,self.feature),
-                               nn.Conv2d(self.feature, self.feature,kernel_size=1))
-                                #RCUBlock(self.feature,self.feature))
-    self.UpBr2 = nn.Sequential(nn.UpsamplingBilinear2d(scale_factor=2),
-                                nn.Conv2d(self.feature, self.feature,kernel_size=1))
-                                #RCUBlock(self.feature,self.feature))
-    self.output = nn.Sequential(RCUBlock(self.feature,self.feature),
-                                RCUBlock(self.feature,self.feature),
-                                nn.Conv2d(self.feature,cfg.MODEL_NUM_CLASSES,kernel_size=1,stride=1,padding=0,bias=True))
-    self.cls_conv = nn.Conv2d(cfg.MODEL_ASPP_OUTDIM, cfg.MODEL_NUM_CLASSES, 1, 1, padding=0)
-    self.backbone_layers = self.backbone.get_layers()
-    
-    for m in self.modules():
-      if isinstance(m, nn.Conv2d):
-        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-      elif isinstance(m, SynchronizedBatchNorm2d):
-				nn.init.constant_(m.weight, 1)
-				nn.init.constant_(m.bias, 0)
+    def __init__(self, cfg, pretrained_backbone=False):
+        super(refinenet, self).__init__()
+        self.backbone = build_backbone(cfg.MODEL_BACKBONE, pretrained=pretrained_backbone, os=cfg.MODEL_OUTPUT_STRIDE)
+        self.in_planes = [64, 256, 512, 1024, 2048]
+        self.feature = 256
+        #self.number_classes = cfg.MODEL_NUM_CLASSES
+
+        self.adj4 = nn.Conv2d(self.in_planes[4], 512,kernel_size=1)
+        self.adj3 = nn.Conv2d(self.in_planes[3], 256,kernel_size=1)
+        self.adj2 = nn.Conv2d(self.in_planes[2], 256,kernel_size=1)
+        self.adj1 = nn.Conv2d(self.in_planes[1], 256,kernel_size=1)
+
+        self.RefineBlock4 = RefineBlock(out_channels=512, Low_input=512, High_input=0)
+        self.RefineBlock3 = RefineBlock(out_channels=256, Low_input=256, High_input=512)
+        self.RefineBlock2 = RefineBlock(out_channels=256, Low_input=256, High_input=256)
+        self.RefineBlock1 = RefineBlock(out_channels=256, Low_input=256, High_input=256)
+        self.UpBr1 = nn.Sequential(nn.UpsamplingBilinear2d(scale_factor=2),
+                                   #ConvUpscaleBlock(self.feature,self.feature),
+                                   nn.Conv2d(self.feature, self.feature,kernel_size=1))
+                                    #RCUBlock(self.feature,self.feature))
+        self.UpBr2 = nn.Sequential(nn.UpsamplingBilinear2d(scale_factor=2),
+                                    nn.Conv2d(self.feature, self.feature,kernel_size=1))
+                                    #RCUBlock(self.feature,self.feature))
+        self.output = nn.Sequential(RCUBlock(self.feature,self.feature),
+                                    RCUBlock(self.feature,self.feature),
+                                    nn.Conv2d(self.feature,cfg.MODEL_NUM_CLASSES,kernel_size=1,stride=1,padding=0,bias=True))
+        self.cls_conv = nn.Conv2d(cfg.MODEL_ASPP_OUTDIM, cfg.MODEL_NUM_CLASSES, 1, 1, padding=0)
+        self.backbone_layers = self.backbone.get_layers()
+
+        for m in self.modules():
+          if isinstance(m, nn.Conv2d):
+            nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+          elif isinstance(m, SynchronizedBatchNorm2d):
+                    nn.init.constant_(m.weight, 1)
+                    nn.init.constant_(m.bias, 0)
 
 
-  def forward(self, x):
+    def forward(self, x):
         x = x[:,:3,:,:]
         x_bottom = self.backbone(x)
         layers = self.backbone.get_layers()

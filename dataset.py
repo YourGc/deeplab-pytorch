@@ -6,7 +6,10 @@ from skimage import io, transform
 import random
 import numpy as np
 from imgaug import augmenters as iaa
+import imgaug as ia
+import torch
 random.seed(666)
+
 
 class DataSet(Dataset):
     def __init__(self,pharse,cfg,root = './data'):
@@ -29,30 +32,41 @@ class DataSet(Dataset):
         img = np.array(img)
         mask = np.array(mask)
         if self.cfg.DATA_AUG:
-            img,mask = self.aug.augment_images([img,mask])
+            segmap = ia.SegmentationMapOnImage(mask, shape=mask.shape, nb_classes=cfg.MODEL_NUM_CLASSES)
+            self.aug.to_deterministic()
+            img = self.aug.augment_image(img)
+            mask = self.aug.augment_segmentation_maps([segmap])[0].get_arr_int().astype(np.uint8)
         # print(mask.shape)
         mask = mask[:,:,np.newaxis]
         img = self.processing(img)
         mask = np.transpose(mask,(2,1,0))
         img = np.transpose(img,(2,1,0))
-        return img,self.expand_mask(mask)
+        # img,mask = torch.Tensor(img) ,torch.Tensor(mask)
+        mask = self.expand_mask(mask)
+        # img = torch.Tensor(img).float()
+        return img,mask
 
     def processing(self,img):
+        # print(img.shape)
         img = img / 255
-        img[:, :0] = img[:,:0] - self.cfg.DATA_MEAN[0]
-        img[:, :1] = img[:, :1] - self.cfg.DATA_MEAN[1]
-        img[:, :2] = img[:, :2] - self.cfg.DATA_MEAN[2]
+        img[:, :,0] = img[:,:,0] - self.cfg.DATA_MEAN[0]
+        img[:, :,1] = img[:, :,1] - self.cfg.DATA_MEAN[1]
+        img[:, :,2] = img[:, :,2] - self.cfg.DATA_MEAN[2]
 
-        img[:, :0] = img[:, :0] / self.cfg.DATA_STD[0]
-        img[:, :1] = img[:, :1] / self.cfg.DATA_STD[1]
-        img[:, :2] = img[:, :2] / self.cfg.DATA_STD[2]
+        img[:, :,0] = img[:, :,0] / self.cfg.DATA_STD[0]
+        img[:, :,1] = img[:, :,1] / self.cfg.DATA_STD[1]
+        img[:, :,2] = img[:, :,2] / self.cfg.DATA_STD[2]
 
         return img
 
     def expand_mask(self,mask):
-        Bsmoke,Corn,Brice = mask.copy(),mask.copy(),mask.copy()
+        # H,W = mask.shape
+        # mask = torch.Tensor(mask).long()
+        # masks = torch.Tensor(self.cfg.MODEL_NUM_CLASSES,H,W).zero_().float()
+        # masks = masks.scatter_(1, mask, 1.)
         #print('---')
-        #print((mask==0).sum(),(mask==1).sum(),(mask==2).sum(),(mask==3).sum())
+        Bsmoke,Corn,Brice = mask.copy(),mask.copy(),mask.copy()
+        # print((mask==0).sum(),(mask==1).sum(),(mask==2).sum(),(mask==3).sum())
         Bsmoke[Bsmoke!=1] = 0
         Bsmoke[Bsmoke==1] = 1
 

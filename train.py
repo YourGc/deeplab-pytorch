@@ -7,6 +7,7 @@ import os
 import sys
 import numpy as np
 import tqdm
+import matplotlib.pyplot as plt
 
 from torch.autograd import Variable
 from config import cfg
@@ -19,6 +20,7 @@ from lib.net.loss import MaskLoss
 from lib.net.sync_batchnorm.replicate import patch_replication_callback
 from dataset import DataSet
 from tensorboardX import SummaryWriter
+from lib.net.refinenet import refinenet
 
 esp = 1e-8
 torch.backends.cudnn.benchmark = True
@@ -45,6 +47,8 @@ def train_net():
 	# 			drop_last=True)
 	
 	net = generate_net(cfg)
+
+	#net =refinenet(cfg,False)
 	
 
 	print('Use %d GPU'%cfg.TRAIN_GPUS)
@@ -82,13 +86,15 @@ def train_net():
 	running_loss = 0.0
 
 	tblogger = SummaryWriter()
-	#net.eval()
+	net.train()
+	# print('asdas')
 	for epoch in range(cfg.TRAIN_MINEPOCH, cfg.TRAIN_EPOCHS):
 		#scheduler.step()
+		net.train()
 		now_lr = adjust_lr(optimizer, epoch)
 
-		avaliable_count = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
-		avaliable_ious = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
+		avaliable_unions = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
+		avaliable_insections = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
 		for i, data in enumerate(train_dataloader):
 			img, mask = data
 			img = Variable(img).float().cuda()
@@ -97,7 +103,7 @@ def train_net():
 			optimizer.zero_grad()
 			output = net(img)
 			loss = criterion(output, mask)
-			compute_iou(output,mask,avaliable_count,avaliable_ious)
+			compute_iou(output,mask,avaliable_unions,avaliable_insections)
 
 			loss.backward()
 			optimizer.step()
@@ -106,13 +112,13 @@ def train_net():
 			if i!=0 and i % cfg.PRINT_FRE == 0:
 				print('epoch:{}/{}\tbatch:{}/{}\tlr:{:.6f}\tloss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}'.format(
 					epoch, cfg.TRAIN_EPOCHS, i, len(train_dataloader),
-					now_lr, running_loss / (i+1) , avaliable_ious[1]/avaliable_count[1], avaliable_ious[2]/avaliable_count[2]
-					 , avaliable_ious[3] / avaliable_count[3]))
+					now_lr, running_loss / (i+1) , avaliable_insections[1]/avaliable_unions[1], avaliable_insections[2]/avaliable_unions[2]
+					 , avaliable_insections[3] / avaliable_unions[3]))
 
 		tblogger.add_scalars('loss', {'train':running_loss / len(train_dataloader)}, epoch)
-		tblogger.add_scalars('Bsmoke', {'train':avaliable_ious[1]/avaliable_count[1]}, epoch)
-		tblogger.add_scalars('Corn', {'train':avaliable_ious[2]/avaliable_count[2]}, epoch)
-		tblogger.add_scalars('Brice', {'train':avaliable_ious[3]/avaliable_count[3]}, epoch)
+		tblogger.add_scalars('Bsmoke', {'train':avaliable_insections[1]/avaliable_unions[1]}, epoch)
+		tblogger.add_scalars('Corn', {'train':avaliable_insections[2]/avaliable_unions[2]}, epoch)
+		tblogger.add_scalars('Brice', {'train':avaliable_insections[3]/avaliable_unions[3]}, epoch)
 
 		running_loss = 0.0
 			
@@ -133,51 +139,60 @@ def train_net():
 
 def eval(net,dataloader,criterion,logger,epoch):
 	net.eval()
-	val_count = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
-	val_ious = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
+	val_unions = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
+	val_insections = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
 	val_loss = 0.0
 	with torch.no_grad():
 		for i ,data in tqdm.tqdm(enumerate(dataloader)):
 			img, mask = data
 			img = Variable(img).float().cuda()
 			mask = Variable(mask).float().cuda()
+			# img.cuda()
+			# mask.cuda()
 			output = net(img)
 			loss = criterion(output, mask)
-			compute_iou(output,mask,val_count,val_ious)
+			compute_iou(output,mask,val_unions,val_insections)
 
 			val_loss += loss.item()
 
 		logger.add_scalars('loss', {'val':val_loss/len(dataloader)}, epoch)
-		logger.add_scalars('Bsmoke', {'val':val_ious[1]/val_count[1]}, epoch)
-		logger.add_scalars('Corn', {'val':val_ious[2]/val_count[2]}, epoch)
-		logger.add_scalars('Brice', {'val':val_ious[3]/val_count[3]}, epoch)
+		logger.add_scalars('Bsmoke', {'val':val_insections[1]/val_unions[1]}, epoch)
+		logger.add_scalars('Corn', {'val':val_insections[2]/val_unions[2]}, epoch)
+		logger.add_scalars('Brice', {'val':val_insections[3]/val_unions[3]}, epoch)
 	print('loss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}'.format(
-		val_loss/len(dataloader), val_ious[1] / val_count[1], val_ious[2] / val_count[2]
-		, val_ious[3] / val_count[3]))
+		val_loss/len(dataloader), val_insections[1] / val_unions[1], val_insections[2] / val_unions[2]
+		, val_insections[3] / val_unions[3]))
 
-def compute_iou(output,target,counts,ious,num = cfg.MODEL_NUM_CLASSES):
+def compute_iou(output,target,unions,insections,num = cfg.MODEL_NUM_CLASSES):
 	# 0 is background
 	output = torch.sigmoid(output)#.cpu().numpy()
-	output[output>=0.5] = 1
+	output[output >= 0.5] = 1
 	output[output < 0.5] = 0
-	n = output.shape[0]
-	for i in range(1,num):#class
-
-		target_i = target[:, i].detach().cpu().numpy()
-		out_put_i = output[:, i].detach().cpu().numpy()
-		insections = target_i * out_put_i
-		unions = target_i +  out_put_i - insections
-
-		out_put_i = out_put_i.sum(axis = (1,2))
-		target_i = target_i.sum(axis = (1,2))
-		insections = insections.sum(axis = (1,2))
-		unions = unions.sum(axis = (1,2))
-		# print(out_put_i,target_i,insections,unions,sep='\n')
-		for j in range(n):
-			if target_i[j] == 0:continue
-			else:
-				counts[i] = counts[i] + 1
-				ious[i] += insections[j]/unions[j]
+	batch_insections = torch.sum(output * target,dim = (0,2,3))
+	batch_unions = torch.sum(output,dim=(0,2,3)) + torch.sum(target,dim = (0,2,3)) - batch_insections
+	for i in range(1,num):
+		unions[i] += batch_unions[i].item()
+		insections[i] += batch_insections[i].item()
+	# for i in range(1,num):#class
+	#
+	# 	target_i = target[:, i].detach().cpu().numpy()
+	# 	out_put_i = output[:, i].detach().cpu().numpy()
+	# 	insection_i = target_i * out_put_i
+	# 	union_i = target_i +  out_put_i - insection_i
+	#
+	# 	out_put_i = out_put_i.sum(axis = (1,2))
+	# 	target_i = target_i.sum(axis = (1,2))
+	# 	insection_i = insection_i.sum(axis = (1,2))
+	# 	union_i = union_i.sum(axis = (1,2))
+	# 	# print(out_put_i,target_i,insections,unions,sep='\n')
+	# 	for j in range(n):
+	# 		# if target_i[j] == 0:continue
+	# 		# else:
+	# 		# 	counts[i] = counts[i] + 1
+	# 		# 	ious[i] += insections[j]/unions[j]
+	# 		#另一种计算方式
+	# 		unions[i] += union_i[j]
+	# 		insections[i] += insection_i[j]
 
 
 def adjust_lr(optimizer, epoch, max_epoch = cfg.TRAIN_EPOCHS):

@@ -12,8 +12,8 @@ class Configuration():
 		self.EXP_NAME = 'deeplabv3'
 
 		self.DATA_NAME = 'VOC2012'
-		self.DATA_AUG = True
-		self.DATA_WORKERS = 8
+		self.DATA_AUG = False
+		self.DATA_WORKERS = 4
 		self.DATA_SIZE = 512
 		self.DATA_RESCALE = 512
 		self.DATA_RANDOMCROP = 512
@@ -27,7 +27,7 @@ class Configuration():
 		self.DATA_STD = [0.24587,0.21886,0.21088]
 
 		self.MODEL_NAME = 'deeplabv3plus'
-		self.MODEL_BACKBONE = 'Xception'
+		self.MODEL_BACKBONE = 'xception'
 		self.MODEL_OUTPUT_STRIDE = 16
 		self.MODEL_ASPP_OUTDIM = 256
 		self.MODEL_SHORTCUT_DIM = 48
@@ -35,7 +35,7 @@ class Configuration():
 		self.MODEL_NUM_CLASSES = 4
 		self.MODEL_SAVE_DIR = os.path.join(self.ROOT_DIR,'model',self.EXP_NAME)
 
-		self.TRAIN_LR = 0.01
+		self.TRAIN_LR = 0.001
 		self.TRAIN_LR_GAMMA = 0.1
 		self.TRAIN_MOMENTUM = 0.9
 		self.TRAIN_WEIGHT_DECAY = 0.0001
@@ -44,7 +44,7 @@ class Configuration():
 		self.TRAIN_GPUS = 4
 		self.TRAIN_BATCHES = 16
 		self.TRAIN_SHUFFLE = True
-		self.TRAIN_MINEPOCH = 0	
+		self.TRAIN_MINEPOCH = 0
 		self.TRAIN_EPOCHS = 50
 		self.TRAIN_LOSS_LAMBDA = 0
 		self.TRAIN_TBLOG = True
@@ -59,11 +59,11 @@ class Configuration():
 		self.TEST_FLIP = True
 		self.TEST_CKPT = os.path.join(self.ROOT_DIR,'model/deeplabv3/deeplabv3plus_res101_atrous_VOC2012_epoch46_all.pth')
 		self.TEST_GPUS = 4
-		self.TEST_BATCHES = 16		
+		self.TEST_BATCHES = 16
 
 		self.__check()
 		self.__add_path(os.path.join(self.ROOT_DIR, 'lib'))
-		
+
 	def __check(self):
 		if not torch.cuda.is_available():
 			raise ValueError('config.py: cuda is not avalable')
