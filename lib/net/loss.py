@@ -10,7 +10,7 @@ class MaskLoss(nn.Module):
 		self.loss = None
 		self.alpha = 0.75
 		self.gamma = 2
-		self.weight = [0.04303,0.33902,0.41242,0.20553]
+		self.weight = [1-0.694139,1-0.088105,1-0.072427,1-0.145329]
 	def forward(self,output, mask):
 		#focal loss
 		# output = F.softmax(output,dim=1)
@@ -30,7 +30,7 @@ class MaskLoss(nn.Module):
 		neg_loss = torch.pow(neg_pk, self.gamma) * torch.log(1 - neg_pk)
 		for i,weight in enumerate(self.weight):
 			pos_loss[:,i,:,:] *= weight
-			neg_loss[:,i,:,:] *= weight
+			neg_loss[:,i,:,:] *= (1 - weight)
 
 		#正负样本比1:3
 		batch_loss = -(self.alpha) * pos_loss.mean() - (1 - self.alpha) * neg_loss.mean()
