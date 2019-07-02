@@ -12,6 +12,33 @@ class MaskLoss(nn.Module):
 		self.gamma = 2
 		self.weight = [1-0.694139,1-0.088105,1-0.072427,1-0.145329]
 	def forward(self,output, mask):
+		#CEloss
+		B, C, H, W = output.size()
+		output = F.softmax(output,dim=1)
+		# print(output.shape)
+		# print(output[0,:,0,0])
+		output = torch.clamp(output, 1e-8, 1. - 1e-8).float()
+		masks = torch.FloatTensor(B, C, H, W).zero_().cuda()
+		# Labels = mask.view(B, 1, H, W)
+		masks = masks.scatter_(1,mask,1.)
+		# print(mask[0,:,0,0])
+		weights = torch.FloatTensor(B,C,H,W).zero_().cuda()
+		for i in range(len(self.weight)):
+			weights[:,i] = self.weight[i]
+
+		#positive
+		pos_idx = masks.ge(1)
+		pos = output[pos_idx] * masks[pos_idx]
+		pos_loss = -torch.log(pos) * weights[pos_idx]
+			# print(pos_loss[0])
+			#
+		# #negtive
+		# neg_idx = mask.le(0)
+		# neg = output[neg_idx] * masks[neg_idx]
+		# neg_loss = -torch.log(1-neg)* (1 - weights[pos_idx])
+		# loss = self.alpha *pos_loss.mean() + (1-self.alpha)*neg_loss.mean()
+
+		return pos_loss.mean()
 		#focal loss
 		# output = F.softmax(output,dim=1)
 		# probs,classes = torch.max(output,1)
@@ -19,23 +46,29 @@ class MaskLoss(nn.Module):
 		# probs.squeeze()
 		# classes.squeeze()
 
-		output = torch.sigmoid(output)
-		#positive
-		pos_pk = output * mask  # [B, C , H, W]
-		pos_pk = torch.clamp(pos_pk, 1e-4, 1. - 1e-4).float()
-		pos_loss = torch.pow((1. - pos_pk), self.gamma) * torch.log(pos_pk)
-		#negative
-		neg_pk = output * (1-mask)  # [B, C , H, W]
-		neg_pk = torch.clamp(neg_pk, 1e-4, 1. - 1e-4).float()
-		neg_loss = torch.pow(neg_pk, self.gamma) * torch.log(1 - neg_pk)
-		for i,weight in enumerate(self.weight):
-			pos_loss[:,i,:,:] *= weight
-			neg_loss[:,i,:,:] *= (1 - weight)
+		#BCE loss
+		# output = torch.sigmoid(output)
+		# output = torch.clamp(output, 1e-4, 1. - 1e-4).float()
+		# loss = -1 *[mask * torch.log(output) + (1-mask)*torch.log(1-output)]
+		# return loss.mean()
 
-		#正负样本比1:3
-		batch_loss = -(self.alpha) * pos_loss.mean() - (1 - self.alpha) * neg_loss.mean()
-		# print batch_loss
-		return batch_loss
+		# #focal loss
+		# #positive
+		# pos_pk = output * mask  # [B, C , H, W]
+		# pos_pk = torch.clamp(pos_pk, 1e-4, 1. - 1e-4).float()
+		# pos_loss = torch.pow((1. - pos_pk), self.gamma) * torch.log(pos_pk)
+		# #negative
+		# neg_pk = output * (1-mask)  # [B, C , H, W]
+		# neg_pk = torch.clamp(neg_pk, 1e-4, 1. - 1e-4).float()
+		# neg_loss = torch.pow(neg_pk, self.gamma) * torch.log(1 - neg_pk)
+		# for i,weight in enumerate(self.weight):
+		# 	pos_loss[:,i,:,:] *= weight
+		# 	neg_loss[:,i,:,:] *= (1 - weight)
+		#
+		# #正负样本比1:3
+		# batch_loss = -(self.alpha) * pos_loss.mean() - (1 - self.alpha) * neg_loss.mean()
+		# # print batch_loss
+		# return batch_loss
 
 		# #BCE
 		# loss = nn.CrossEntropyLoss()(output,mask.long())

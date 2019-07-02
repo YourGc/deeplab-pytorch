@@ -128,11 +128,44 @@ def AverageResult(results):
 
 	return final_result / 2
 
+def test_img(args):
+	net = generate_net(cfg)
+	net.eval()
+	print('net initialize')
+
+	print('Use %d GPU' % cfg.TEST_GPUS)
+	device = torch.device('cuda')
+	if cfg.TEST_GPUS > 1:
+		net = nn.DataParallel(net)
+		patch_replication_callback(net)
+	net.to(device)
+
+	print('start loading model %s' % args.model_path)
+	model_dict = torch.load(args.model_path, map_location=device)
+	net.load_state_dict(model_dict)
+
+	net.eval()
+
+	create_dir(args.save_dir)
+	with torch.no_grad():
+		img = Image.open('./data/imgs/1_48.png')
+		img = np.array(img)
+		img = np.transpose(img,(2,0,1))
+		img = img[np.newaxis,:,:,:]
+		img = torch.FloatTensor(img).cuda()#Variable(img).float().cuda()
+		output = net(img)
+		output = output.detach().cpu().numpy()
+		output = np.argmax(output,axis=1)
+		print(output.shape)
+		output = Image.fromarray(np.uint8(output[0]))
+		output.save(os.path.join(args.save_dir,'1_48.png'))
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="Test")
 	parser.add_argument('--model_path', type=str, required=True, help='model_path')
 	parser.add_argument('--save_dir',type=str,required=True,help='save_dir')
-	args = parser.parse_args()
-	test_net(args)
 
+	args = parser.parse_args()
+	# test_net(args)
+	test_img(args)
 

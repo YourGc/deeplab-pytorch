@@ -7,6 +7,7 @@ import os
 import sys
 import numpy as np
 import tqdm
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 from torch.autograd import Variable
@@ -32,7 +33,7 @@ def train_net():
                             batch_size=cfg.TRAIN_BATCHES,
                             num_workers=cfg.DATA_WORKERS)
 
-	val_cumtom_dataset = DataSet(pharse='val',cfg=cfg)
+	val_cumtom_dataset = DataSet(pharse='train',cfg=cfg)
 	val_dataloader = DataLoader(dataset=val_cumtom_dataset,
 							shuffle=True,
 							batch_size=cfg.TEST_BATCHES,
@@ -49,7 +50,8 @@ def train_net():
 	net = generate_net(cfg)
 
 	#net =refinenet(cfg,False)
-	
+	#net.apply(weights_init)
+
 
 	print('Use %d GPU'%cfg.TRAIN_GPUS)
 	device = torch.device(0)
@@ -80,25 +82,25 @@ def train_net():
 		momentum=cfg.TRAIN_MOMENTUM,
 		weight_decay=cfg.TRAIN_WEIGHT_DECAY
 	)
+	# scheduler = optim.lr_scheduler.(optimizer,gamma=cfg.TRAIN_LR_GAMMA)
 	#scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN_LR_MST, gamma=cfg.TRAIN_LR_GAMMA, last_epoch=-1)
-	# itr = cfg.TRAIN_MINEPOCH * len(dataloader)
-	# max_itr = cfg.TRAIN_EPOCHS * len(dataloader)
+	itr = cfg.TRAIN_MINEPOCH * len(train_dataloader)
+	max_itr = cfg.TRAIN_EPOCHS * len(train_dataloader)
 	running_loss = 0.0
 
 	tblogger = SummaryWriter()
 	net.train()
 	# print('asdas')
 	for epoch in range(cfg.TRAIN_MINEPOCH, cfg.TRAIN_EPOCHS):
-		#scheduler.step()
+		# scheduler.step()
 		net.train()
 		now_lr = adjust_lr(optimizer, epoch)
-
 		avaliable_unions = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
 		avaliable_insections = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
 		for i, data in enumerate(train_dataloader):
 			img, mask = data
 			img = Variable(img).float().cuda()
-			mask = Variable(mask).float().cuda()
+			mask = Variable(mask).long().cuda()
 			#print(mask.shape, type(mask))
 			optimizer.zero_grad()
 			output = net(img)
@@ -110,15 +112,16 @@ def train_net():
 
 			running_loss += loss.item()
 			if i!=0 and i % cfg.PRINT_FRE == 0:
-				print('epoch:{}/{}\tbatch:{}/{}\tlr:{:.6f}\tloss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}'.format(
+				print('epoch:{}/{}\tbatch:{}/{}\tlr:{:.6f}\tloss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}\tBG:{:.6f}'.format(
 					epoch, cfg.TRAIN_EPOCHS, i, len(train_dataloader),
 					now_lr, running_loss / (i+1) , avaliable_insections[1]/avaliable_unions[1], avaliable_insections[2]/avaliable_unions[2]
-					 , avaliable_insections[3] / avaliable_unions[3]))
+					 , avaliable_insections[3] / avaliable_unions[3],avaliable_insections[0]/avaliable_unions[0]))
 
-		tblogger.add_scalars('loss', {'train':running_loss / len(train_dataloader)}, epoch)
-		tblogger.add_scalars('Bsmoke', {'train':avaliable_insections[1]/avaliable_unions[1]}, epoch)
-		tblogger.add_scalars('Corn', {'train':avaliable_insections[2]/avaliable_unions[2]}, epoch)
-		tblogger.add_scalars('Brice', {'train':avaliable_insections[3]/avaliable_unions[3]}, epoch)
+			tblogger.add_scalars('loss', {'train':running_loss / len(train_dataloader)}, len(train_dataloader) * epoch + i )
+			tblogger.add_scalars('bg', {'train':avaliable_insections[0]/avaliable_unions[0]}, len(train_dataloader) * epoch + i )
+			tblogger.add_scalars('Bsmoke', {'train':avaliable_insections[1]/avaliable_unions[1]}, len(train_dataloader) * epoch + i )
+			tblogger.add_scalars('Corn', {'train':avaliable_insections[2]/avaliable_unions[2]}, len(train_dataloader) * epoch + i )
+			tblogger.add_scalars('Brice', {'train':avaliable_insections[3]/avaliable_unions[3]}, len(train_dataloader) * epoch + i )
 
 		running_loss = 0.0
 			
@@ -146,7 +149,7 @@ def eval(net,dataloader,criterion,logger,epoch):
 		for i ,data in tqdm.tqdm(enumerate(dataloader)):
 			img, mask = data
 			img = Variable(img).float().cuda()
-			mask = Variable(mask).float().cuda()
+			mask = Variable(mask).long().cuda()
 			# img.cuda()
 			# mask.cuda()
 			output = net(img)
@@ -155,22 +158,32 @@ def eval(net,dataloader,criterion,logger,epoch):
 
 			val_loss += loss.item()
 
-		logger.add_scalars('loss', {'val':val_loss/len(dataloader)}, epoch)
-		logger.add_scalars('Bsmoke', {'val':val_insections[1]/val_unions[1]}, epoch)
-		logger.add_scalars('Corn', {'val':val_insections[2]/val_unions[2]}, epoch)
-		logger.add_scalars('Brice', {'val':val_insections[3]/val_unions[3]}, epoch)
-	print('loss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}'.format(
+			logger.add_scalars('loss', {'val':val_loss/len(dataloader)}, len(dataloader) * epoch + i )
+			logger.add_scalars('bg', {'val':val_insections[0]/val_unions[0]}, len(dataloader) * epoch + i )
+			logger.add_scalars('Bsmoke', {'val':val_insections[1]/val_unions[1]}, len(dataloader) * epoch + i )
+			logger.add_scalars('Corn', {'val':val_insections[2]/val_unions[2]}, len(dataloader) * epoch + i )
+			logger.add_scalars('Brice', {'val':val_insections[3]/val_unions[3]}, len(dataloader) * epoch + i )
+	print('loss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}\tBG:{:.6f}'.format(
 		val_loss/len(dataloader), val_insections[1] / val_unions[1], val_insections[2] / val_unions[2]
-		, val_insections[3] / val_unions[3]))
+		, val_insections[3] / val_unions[3],val_insections[0] / val_unions[0]))
 
-def compute_iou(output,target,unions,insections,num = cfg.MODEL_NUM_CLASSES):
+def compute_iou(output,mask,unions,insections,num = cfg.MODEL_NUM_CLASSES):
 	# 0 is background
-	output = torch.sigmoid(output)#.cpu().numpy()
-	output[output >= 0.5] = 1
-	output[output < 0.5] = 0
-	batch_insections = torch.sum(output * target,dim = (0,2,3))
-	batch_unions = torch.sum(output,dim=(0,2,3)) + torch.sum(target,dim = (0,2,3)) - batch_insections
-	for i in range(1,num):
+	B,C,H,W = output.shape
+	output = torch.argmax(output,dim = 1)#.cpu().numpy()
+	output = output.view(B, 1, H, W)
+	outputs = torch.LongTensor(B, C, H, W).zero_().cuda()
+	outputs = outputs.scatter_(1,output,1.)
+
+	masks = torch.LongTensor(B, C, H, W).zero_().cuda()
+	masks = masks.scatter_(1, mask, 1.)
+
+	assert masks.shape == outputs.shape
+
+
+	batch_insections = torch.sum(outputs * masks,dim = (0,2,3))
+	batch_unions = torch.sum(outputs,dim=(0,2,3)) + torch.sum(masks,dim = (0,2,3)) - batch_insections
+	for i in range(0,num):
 		unions[i] += batch_unions[i].item()
 		insections[i] += batch_insections[i].item()
 	# for i in range(1,num):#class
@@ -201,6 +214,16 @@ def adjust_lr(optimizer, epoch, max_epoch = cfg.TRAIN_EPOCHS):
 	# optimizer.param_groups[1]['lr'] = now_lr * 10
 	return now_lr
 
+def weights_init(m):
+	if isinstance(m, nn.Conv2d):
+		nn.init.xavier_normal_(m.weight.data)
+		nn.init.xavier_normal_(m.bias.data)
+	elif isinstance(m, nn.BatchNorm2d):
+		nn.init.constant_(m.weight,1)
+		nn.init.constant_(m.bias, 0)
+	elif isinstance(m, nn.BatchNorm1d):
+		nn.init.constant_(m.weight,1)
+		nn.init.constant_(m.bias, 0)
 
 def get_params(model, key):
 	for m in model.named_modules():

@@ -27,7 +27,7 @@ class Configuration():
 		self.DATA_STD = [0.24587,0.21886,0.21088]
 
 		self.MODEL_NAME = 'deeplabv3plus'
-		self.MODEL_BACKBONE = 'xception'
+		self.MODEL_BACKBONE = 'res101_atrous'
 		self.MODEL_OUTPUT_STRIDE = 16
 		self.MODEL_ASPP_OUTDIM = 256
 		self.MODEL_SHORTCUT_DIM = 48

@@ -7,6 +7,8 @@ import random
 import numpy as np
 from imgaug import augmenters as iaa
 import imgaug as ia
+from PIL import Image
+import matplotlib.pyplot as plt
 import torch
 random.seed(666)
 
@@ -29,9 +31,11 @@ class DataSet(Dataset):
     def __getitem__(self, index):
         img = io.imread(os.path.join(self.img_path,self.files[index]))
         mask = io.imread(os.path.join(self.lable_path,self.files[index]))
+        # plt.imshow()
         img = np.array(img)
         mask = np.array(mask)
         if self.cfg.DATA_AUG:
+            print('aug')
             segmap = ia.SegmentationMapOnImage(mask, shape=mask.shape, nb_classes=cfg.MODEL_NUM_CLASSES)
             self.aug.to_deterministic()
             img = self.aug.augment_image(img)
@@ -39,10 +43,10 @@ class DataSet(Dataset):
         # print(mask.shape)
         mask = mask[:,:,np.newaxis]
         img = self.processing(img)
-        mask = np.transpose(mask,(2,1,0))
-        img = np.transpose(img,(2,1,0))
+        mask = np.transpose(mask,(2,0,1))
+        img = np.transpose(img,(2,0,1))
         # img,mask = torch.Tensor(img) ,torch.Tensor(mask)
-        mask = self.expand_mask(mask)
+        #mask = self.expand_mask(mask)
         # img = torch.Tensor(img).float()
         return img,mask
 
@@ -123,13 +127,13 @@ class Test_DataSet(Dataset):
 
     def processing(self,img):
         img = img / 255
-        img[:, :0] = img[:,:0] - self.cfg.DATA_MEAN[0]
-        img[:, :1] = img[:, :1] - self.cfg.DATA_MEAN[1]
-        img[:, :2] = img[:, :2] - self.cfg.DATA_MEAN[2]
+        img[:, :,0] = img[:,:,0] - self.cfg.DATA_MEAN[0]
+        img[:, :,1] = img[:, :,1] - self.cfg.DATA_MEAN[1]
+        img[:, :,2] = img[:, :,2] - self.cfg.DATA_MEAN[2]
 
-        img[:, :0] = img[:, :0] / self.cfg.DATA_STD[0]
-        img[:, :1] = img[:, :1] / self.cfg.DATA_STD[1]
-        img[:, :2] = img[:, :2] / self.cfg.DATA_STD[2]
+        img[:, :,0] = img[:, :,0] / self.cfg.DATA_STD[0]
+        img[:, :,1] = img[:, :,1] / self.cfg.DATA_STD[1]
+        img[:, :,2] = img[:, :,2] / self.cfg.DATA_STD[2]
 
         return img
 
@@ -152,7 +156,4 @@ if __name__ == '__main__':
                                   shuffle=True,
                                   batch_size=cfg.TRAIN_BATCHES,
                                   num_workers=cfg.DATA_WORKERS)
-    print(len(train_cumtom_dataset))
-    for i,data in enumerate(train_dataloader):
-        print(i)
-        pass
+    train_cumtom_dataset.__getitem__(index=5)
