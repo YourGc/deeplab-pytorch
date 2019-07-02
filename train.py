@@ -29,17 +29,17 @@ torch.backends.cudnn.benchmark = True
 def train_net():
 	train_cumtom_dataset = DataSet(pharse='train',cfg=cfg)
 	train_dataloader = DataLoader(dataset=train_cumtom_dataset,
-                            shuffle=True,
+                            shuffle=False,
                             batch_size=cfg.TRAIN_BATCHES,
                             num_workers=cfg.DATA_WORKERS)
 
-	val_cumtom_dataset = DataSet(pharse='train',cfg=cfg)
+	val_cumtom_dataset = DataSet(pharse='val',cfg=cfg)
 	val_dataloader = DataLoader(dataset=val_cumtom_dataset,
 							shuffle=True,
 							batch_size=cfg.TEST_BATCHES,
 							num_workers=cfg.DATA_WORKERS)
 	print('train dataset : {} ,with batch size :{}'.format(len(train_cumtom_dataset),cfg.TRAIN_BATCHES))
-	print('train dataset : {} ,with batch size :{}'.format(len(val_cumtom_dataset), cfg.TEST_BATCHES))
+	print('val dataset : {} ,with batch size :{}'.format(len(val_cumtom_dataset), cfg.TEST_BATCHES))
 	# dataset = generate_dataset(cfg.DATA_NAME, cfg, 'train', cfg.DATA_AUG)
 	# dataloader = DataLoader(dataset,
 	# 			batch_size=cfg.TRAIN_BATCHES,
@@ -89,7 +89,6 @@ def train_net():
 	running_loss = 0.0
 
 	tblogger = SummaryWriter()
-	net.train()
 	# print('asdas')
 	for epoch in range(cfg.TRAIN_MINEPOCH, cfg.TRAIN_EPOCHS):
 		# scheduler.step()
@@ -110,18 +109,27 @@ def train_net():
 			loss.backward()
 			optimizer.step()
 
-			running_loss += loss.item()
+			cur_loss = loss.item()
+			# print(cur_loss)
+
+			# net.eval()
+			# output = net(img)
+			# eval_loss = criterion(output,mask).item()
+			# print(eval_loss)
+			# net.train()
+
+			running_loss += cur_loss
 			if i!=0 and i % cfg.PRINT_FRE == 0:
 				print('epoch:{}/{}\tbatch:{}/{}\tlr:{:.6f}\tloss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}\tBG:{:.6f}'.format(
 					epoch, cfg.TRAIN_EPOCHS, i, len(train_dataloader),
-					now_lr, running_loss / (i+1) , avaliable_insections[1]/avaliable_unions[1], avaliable_insections[2]/avaliable_unions[2]
+					now_lr, running_loss/(i+1) , avaliable_insections[1]/avaliable_unions[1], avaliable_insections[2]/avaliable_unions[2]
 					 , avaliable_insections[3] / avaliable_unions[3],avaliable_insections[0]/avaliable_unions[0]))
 
-			tblogger.add_scalars('loss', {'train':running_loss / len(train_dataloader)}, len(train_dataloader) * epoch + i )
-			tblogger.add_scalars('bg', {'train':avaliable_insections[0]/avaliable_unions[0]}, len(train_dataloader) * epoch + i )
-			tblogger.add_scalars('Bsmoke', {'train':avaliable_insections[1]/avaliable_unions[1]}, len(train_dataloader) * epoch + i )
-			tblogger.add_scalars('Corn', {'train':avaliable_insections[2]/avaliable_unions[2]}, len(train_dataloader) * epoch + i )
-			tblogger.add_scalars('Brice', {'train':avaliable_insections[3]/avaliable_unions[3]}, len(train_dataloader) * epoch + i )
+		tblogger.add_scalars('loss', {'train':running_loss / len(train_dataloader)}, epoch )
+		tblogger.add_scalars('bg', {'train':avaliable_insections[0]/avaliable_unions[0]}, epoch )
+		tblogger.add_scalars('Bsmoke', {'train':avaliable_insections[1]/avaliable_unions[1]}, epoch )
+		tblogger.add_scalars('Corn', {'train':avaliable_insections[2]/avaliable_unions[2]}, epoch )
+		tblogger.add_scalars('Brice', {'train':avaliable_insections[3]/avaliable_unions[3]}, epoch )
 
 		running_loss = 0.0
 			
@@ -141,7 +149,7 @@ def train_net():
 	print('train finished!')
 
 def eval(net,dataloader,criterion,logger,epoch):
-	net.eval()
+	# net.eval()
 	val_unions = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
 	val_insections = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
 	val_loss = 0.0
@@ -155,14 +163,14 @@ def eval(net,dataloader,criterion,logger,epoch):
 			output = net(img)
 			loss = criterion(output, mask)
 			compute_iou(output,mask,val_unions,val_insections)
-
+			# print(loss.item())
 			val_loss += loss.item()
 
-			logger.add_scalars('loss', {'val':val_loss/len(dataloader)}, len(dataloader) * epoch + i )
-			logger.add_scalars('bg', {'val':val_insections[0]/val_unions[0]}, len(dataloader) * epoch + i )
-			logger.add_scalars('Bsmoke', {'val':val_insections[1]/val_unions[1]}, len(dataloader) * epoch + i )
-			logger.add_scalars('Corn', {'val':val_insections[2]/val_unions[2]}, len(dataloader) * epoch + i )
-			logger.add_scalars('Brice', {'val':val_insections[3]/val_unions[3]}, len(dataloader) * epoch + i )
+		logger.add_scalars('loss', {'val':val_loss/len(dataloader)}, epoch)
+		logger.add_scalars('bg', {'val':val_insections[0]/val_unions[0]}, epoch )
+		logger.add_scalars('Bsmoke', {'val':val_insections[1]/val_unions[1]}, epoch)
+		logger.add_scalars('Corn', {'val':val_insections[2]/val_unions[2]},epoch)
+		logger.add_scalars('Brice', {'val':val_insections[3]/val_unions[3]}, epoch )
 	print('loss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}\tBG:{:.6f}'.format(
 		val_loss/len(dataloader), val_insections[1] / val_unions[1], val_insections[2] / val_unions[2]
 		, val_insections[3] / val_unions[3],val_insections[0] / val_unions[0]))

@@ -20,7 +20,7 @@ class DataSet(Dataset):
         self.img_path = root + r'/imgs'
         self.lable_path = root + r'/masks'
         self.files = self.load_file()
-        # self.files = [self.files[i] for i in range(50)]
+        # self.files = [self.files[i] for i in range(16)]
         self.cfg = cfg
         self.aug = iaa.Sequential([
             iaa.Fliplr(0.5),
