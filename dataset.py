@@ -119,11 +119,14 @@ class Test_DataSet(Dataset):
     def __getitem__(self, index):
         img_name = self.imgs[index]
         img = io.imread(os.path.join(self.img_path,img_name))
-        imgs = self.test_time_aug(img)
-        imgs = [np.array(img)for img in imgs]
-        imgs = [self.processing(img) for img in imgs]
-        imgs = [np.transpose(img,(2,1,0)) for img in imgs]
-        return imgs,img_name
+        img = np.array(img)
+        # imgs = self.test_time_aug(img)
+        # imgs = [np.array(img)for img in imgs]
+        # imgs = [self.processing(img) for img in imgs]
+        # imgs = [np.transpose(img,(2,1,0)) for img in imgs]
+        img = self.processing(img)
+        img = np.transpose(img,(2,0,1))
+        return img,img_name
 
     def processing(self,img):
         img = img / 255

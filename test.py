@@ -15,6 +15,7 @@ from lib.net.sync_batchnorm.replicate import patch_replication_callback
 from PIL import Image
 from torch.utils.data import DataLoader
 from Tools import create_dir
+from lib.net.loss import MaskLoss
 
 Image.MAX_IMAGE_PIXELS = 100000000000
 def test_net(args):
@@ -58,18 +59,21 @@ def test_net(args):
 									shuffle=False,
 									num_workers=2)
 
-			mask = np.zeros(shape=(4,max_w * STRIDE,max_h * STRIDE),dtype=np.float32)
+			mask = np.zeros(shape=(4,max_w * STRIDE,max_h * STRIDE),dtype=np.float16)
 			#print(mask.shape)
 			create_dir(os.path.join(args.save_dir,str(idx) + '_tmp'))
 			print("-----Test In Image {} -----".format(idx))
 
 			for imgs,name in tqdm.tqdm(test_dataloader):
-				results = []
-				for img in imgs:
-					img = Variable(img).float().cuda()
-					output = net(img)
-					results.append(output.squeeze())
-				result = AverageResult(results)#.detach().cpu().numpy()
+				# results = []
+				# for img in imgs:
+				# 	img = Variable(img).float().cuda()
+				# 	output = net(img)
+				# 	results.append(output.squeeze())
+				# result = AverageResult(results)#.detach().cpu().numpy()
+				img = Variable(imgs).float().cuda()
+				result = net(img)
+				result = torch.softmax(result,dim = 1).detach().cpu().numpy()
 				# img = Variable(imgs).float().cuda()
 				# output = net(img)
 				# result = output.squeeze().detach().cpu().numpy()
@@ -80,11 +84,12 @@ def test_net(args):
 				mask[:,w_idx * STRIDE:w_idx * STRIDE + SIZE ,h_idx * STRIDE:h_idx * STRIDE+SIZE] = \
 					mask[:, w_idx * STRIDE:w_idx * STRIDE + SIZE, h_idx * STRIDE:h_idx * STRIDE + SIZE] + \
 					result
+				del result
 			del test_dataloader
 			del test_dataset
 			#fix mask 取均值防止重复计算
-			mask[:,STRIDE:-STRIDE,:] /=2
-			mask[:,:,STRIDE:-STRIDE] /= 2
+			# mask[:,STRIDE:-STRIDE,:] /=2
+			# mask[:,:,STRIDE:-STRIDE] /= 2
 			mask = mask[:,w_pad[0] : -w_pad[1],h_pad[0]:-h_pad[1]]
 			#通道整合
 			# mask.tofile('mask.npy')# 以防万一
@@ -130,7 +135,7 @@ def AverageResult(results):
 
 def test_img(args):
 	net = generate_net(cfg)
-	net.eval()
+	# net.eval()
 	print('net initialize')
 
 	print('Use %d GPU' % cfg.TEST_GPUS)
@@ -144,13 +149,29 @@ def test_img(args):
 	model_dict = torch.load(args.model_path, map_location=device)
 	net.load_state_dict(model_dict)
 
+	criterion = MaskLoss()
 	net.eval()
 
 	create_dir(args.save_dir)
 	with torch.no_grad():
-		img = Image.open('./data/imgs/1_48.png')
+		img = Image.open('33_54.jpg')
 		img = np.array(img)
+
+		def processing(img):
+			# print(img.shape)
+			img = img / 255
+			img[:, :, 0] = img[:, :, 0] - cfg.DATA_MEAN[0]
+			img[:, :, 1] = img[:, :, 1] - cfg.DATA_MEAN[1]
+			img[:, :, 2] = img[:, :, 2] - cfg.DATA_MEAN[2]
+
+			img[:, :, 0] = img[:, :, 0] / cfg.DATA_STD[0]
+			img[:, :, 1] = img[:, :, 1] / cfg.DATA_STD[1]
+			img[:, :, 2] = img[:, :, 2] / cfg.DATA_STD[2]
+			return img
+
+		img = processing(img)
 		img = np.transpose(img,(2,0,1))
+
 		img = img[np.newaxis,:,:,:]
 		img = torch.FloatTensor(img).cuda()#Variable(img).float().cuda()
 		output = net(img)
@@ -158,7 +179,7 @@ def test_img(args):
 		output = np.argmax(output,axis=1)
 		print(output.shape)
 		output = Image.fromarray(np.uint8(output[0]))
-		output.save(os.path.join(args.save_dir,'1_48.png'))
+		output.save(os.path.join(args.save_dir,'33_54.png'))
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="Test")
@@ -166,6 +187,6 @@ if __name__ == '__main__':
 	parser.add_argument('--save_dir',type=str,required=True,help='save_dir')
 
 	args = parser.parse_args()
-	# test_net(args)
-	test_img(args)
+	# test_img(args)
+	test_net(args)
 
