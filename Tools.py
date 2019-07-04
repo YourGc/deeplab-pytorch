@@ -141,7 +141,7 @@ def padding_crop():
             for j in range(int(h_count) - 1):
                 sub_img = img[i * STRIDE:i * STRIDE + SIZE,j * STRIDE:j * STRIDE + SIZE,:]
                 sub_img = Image.fromarray(sub_img)
-                sub_img.save(os.path.join(test_path,str(idx+3),str(i) + '_' + str(j) + '.jpg'))
+                sub_img.save(os.path.join(test_path,'1',str(i) + '_' + str(j) + '.jpg'))
 
 def fix_label():
     Image.MAX_IMAGE_PIXELS = 100000000000
