@@ -61,6 +61,7 @@ def train_net():
 	net.to(device)		
 
 	if cfg.TRAIN_CKPT:
+		print('load checkpoint from : {}'.format(cfg.TRAIN_CKPT))
 		pretrained_dict = torch.load(cfg.TRAIN_CKPT)
 		net_dict = net.state_dict()
 		pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in net_dict) and (v.shape==net_dict[k].shape)}
@@ -149,7 +150,7 @@ def train_net():
 	print('train finished!')
 
 def eval(net,dataloader,criterion,logger,epoch):
-	# net.eval()
+	net.eval()
 	val_unions = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
 	val_insections = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
 	val_loss = 0.0

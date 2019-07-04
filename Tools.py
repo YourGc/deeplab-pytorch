@@ -101,12 +101,14 @@ def padding_crop():
     #Image image_4.png, width padding : (176,176),height padding : (88,88)
     Image.MAX_IMAGE_PIXELS = 100000000000
     SIZE = 512
-    STRIDE = 256
+    STRIDE = 512
 
     test_path = './data/test'
     img_files = os.listdir(test_path)
     for idx,img_file in enumerate(img_files):
-        create_dir(os.path.join(test_path,str(idx+3)))
+        if "1" not in img_file: continue
+        print(img_file)
+        create_dir(os.path.join(test_path,'1'))
         img = Image.open(os.path.join(test_path,img_file))
         img = img.convert('RGB')
         img = np.array(img)
@@ -177,10 +179,10 @@ def fix_label():
 
 
 if __name__ == '__main__':
-    fix_label()
+    # train_val_split()
     # a = np.zeros(shape=(4,20000,37000),dtype=np.float32)
     # print(a.shape)
-    #padding_crop()
+    padding_crop()
 
 
 

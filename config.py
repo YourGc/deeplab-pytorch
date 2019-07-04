@@ -44,11 +44,11 @@ class Configuration():
 		self.TRAIN_GPUS = 4
 		self.TRAIN_BATCHES = 16
 		self.TRAIN_SHUFFLE = True
-		self.TRAIN_MINEPOCH = 0
+		self.TRAIN_MINEPOCH = 20
 		self.TRAIN_EPOCHS = 50
 		self.TRAIN_LOSS_LAMBDA = 0
 		self.TRAIN_TBLOG = True
-		self.TRAIN_CKPT = None#os.path.join(self.ROOT_DIR,'model/deeplabv3+voc/deeplabv3plus_xception_VOC2012_itr0.pth')
+		self.TRAIN_CKPT = os.path.join(self.ROOT_DIR,'model/deeplabv3/deeplabv3plus_res101_atrous_VOC2012_epoch20.pth')
 
 		self.LOG_DIR = os.path.join(self.ROOT_DIR,'log',self.EXP_NAME)
 
@@ -57,7 +57,7 @@ class Configuration():
 
 		self.TEST_MULTISCALE = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75]
 		self.TEST_FLIP = True
-		self.TEST_CKPT = os.path.join(self.ROOT_DIR,'model/deeplabv3/deeplabv3plus_res101_atrous_VOC2012_epoch46_all.pth')
+		self.TEST_CKPT = os.path.join(self.ROOT_DIR,'model/deeplabv3/deeplabv3plus_res101_atrous_VOC2012_epoch20.pth')
 		self.TEST_GPUS = 4
 		self.TEST_BATCHES = 16
 

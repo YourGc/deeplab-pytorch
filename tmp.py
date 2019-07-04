@@ -66,16 +66,5 @@ import imgaug.augmenters as iaa
 #     plt.show()
 #     plt.matshow(seq_det.augment_segmentation_maps([segmap])[0].get_arr_int().astype(np.uint8))
 #     plt.show()
-label = Image.open('1_34_ori.png')
-pred = Image.open('33_54.png')
-#print((label==pred).sum())
-
-label = np.array(label)
-pred = np.array(pred)
-print(pred)
-print((pred==2).sum())
-
-# plt.imshow(label)
-# plt.show()
-plt.matshow(pred)
-plt.show()
+labels = np.load(r'F:\AIagriculture\data\train\image_1_label.npy')
+print(labels[2756])

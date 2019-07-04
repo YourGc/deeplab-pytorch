@@ -14,7 +14,7 @@ random.seed(666)
 
 
 class DataSet(Dataset):
-    def __init__(self,pharse,cfg,root = './data'):
+    def __init__(self,pharse,root = './data',cfg = cfg):
         super(Dataset,self).__init__()
         self.pharse = pharse
         self.img_path = root + r'/imgs'
@@ -31,24 +31,33 @@ class DataSet(Dataset):
     def __getitem__(self, index):
         img = io.imread(os.path.join(self.img_path,self.files[index]))
         mask = io.imread(os.path.join(self.lable_path,self.files[index]))
+        # print(self.files[index])
         # plt.imshow()
         img = np.array(img)
         mask = np.array(mask)
-        if self.cfg.DATA_AUG:
-            print('aug')
-            segmap = ia.SegmentationMapOnImage(mask, shape=mask.shape, nb_classes=cfg.MODEL_NUM_CLASSES)
-            self.aug.to_deterministic()
-            img = self.aug.augment_image(img)
-            mask = self.aug.augment_segmentation_maps([segmap])[0].get_arr_int().astype(np.uint8)
+        # if self.cfg.DATA_AUG:
+        #     print('aug')
+        #     segmap = ia.SegmentationMapOnImage(mask, shape=mask.shape, nb_classes=cfg.MODEL_NUM_CLASSES)
+        #     self.aug.to_deterministic()
+        #     img = self.aug.augment_image(img)
+        #     mask = self.aug.augment_segmentation_maps([segmap])[0].get_arr_int().astype(np.uint8)
         # print(mask.shape)
         mask = mask[:,:,np.newaxis]
+        if len(mask.shape) == 4: print(self.files[index])
         img = self.processing(img)
         mask = np.transpose(mask,(2,0,1))
+        # print(mask)
         img = np.transpose(img,(2,0,1))
         # img,mask = torch.Tensor(img) ,torch.Tensor(mask)
         #mask = self.expand_mask(mask)
         # img = torch.Tensor(img).float()
+        # self.visulization_from_array(img,mask)
         return img,mask
+    def visulization_from_array(self,img,mask):
+        plt.imshow(np.transpose(img,(1,2,0)))
+        plt.show()
+        plt.matshow(mask[0])
+        plt.show()
 
     def processing(self,img):
         # print(img.shape)
@@ -69,10 +78,10 @@ class DataSet(Dataset):
         # masks = torch.Tensor(self.cfg.MODEL_NUM_CLASSES,H,W).zero_().float()
         # masks = masks.scatter_(1, mask, 1.)
         #print('---')
-        Bsmoke,Corn,Brice = mask.copy(),mask.copy(),mask.copy()
+        Tobacco,Corn,Brice = mask.copy(),mask.copy(),mask.copy()
         # print((mask==0).sum(),(mask==1).sum(),(mask==2).sum(),(mask==3).sum())
-        Bsmoke[Bsmoke!=1] = 0
-        Bsmoke[Bsmoke==1] = 1
+        Tobacco[Tobacco!=1] = 0
+        Tobacco[Tobacco==1] = 1
 
         Corn[Corn!=2] = 0
         Corn[Corn==2] = 1
@@ -84,7 +93,7 @@ class DataSet(Dataset):
         mask[mask == 0] =1
         mask[mask == 2] = 0
         #print(mask.sum(),Bsmoke.sum(),Corn.sum(),Brice.sum())
-        masks = np.vstack((mask,Bsmoke,Corn,Brice))
+        masks = np.vstack((mask,Tobacco,Corn,Brice))
         # print(masks.sum())
         return masks
 
@@ -156,7 +165,13 @@ class Test_DataSet(Dataset):
 if __name__ == '__main__':
     train_cumtom_dataset = DataSet(pharse='train', cfg=cfg)
     train_dataloader = DataLoader(dataset=train_cumtom_dataset,
-                                  shuffle=True,
-                                  batch_size=cfg.TRAIN_BATCHES,
-                                  num_workers=cfg.DATA_WORKERS)
-    train_cumtom_dataset.__getitem__(index=5)
+                                  shuffle=False,
+                                  batch_size=1,
+                                  num_workers=1)
+    # train_cumtom_dataset.__getitem__(index=5)
+    # train_cumtom_dataset.__getitem__(index=16)
+    # train_cumtom_dataset.__getitem__(index=17)
+    train_cumtom_dataset.__getitem__(index=18)
+    train_cumtom_dataset.__getitem__(index=26)
+    train_cumtom_dataset.__getitem__(index=27)
+    train_cumtom_dataset.__getitem__(index=28)
