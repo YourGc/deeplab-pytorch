@@ -8,6 +8,7 @@ import tqdm
 
 from PIL import Image
 random.seed(666)
+Image.MAX_IMAGE_PIXELS = 100000000000
 
 def read_train_txt():
     path = './data/train.txt'
@@ -106,9 +107,9 @@ def padding_crop():
     test_path = './data/test'
     img_files = os.listdir(test_path)
     for idx,img_file in enumerate(img_files):
-        if "1" not in img_file: continue
+        # if "1" not in img_file: continue
         print(img_file)
-        create_dir(os.path.join(test_path,'1'))
+        create_dir(os.path.join(test_path,img_file.strip('.png')[-1]))
         img = Image.open(os.path.join(test_path,img_file))
         img = img.convert('RGB')
         img = np.array(img)
@@ -137,30 +138,41 @@ def padding_crop():
         w_count *= SIZE/STRIDE
         h_count *= SIZE/STRIDE
         print('Croping')
-        for i in tqdm.tqdm(range(int(w_count) - 1)):
-            for j in range(int(h_count) - 1):
+        for i in tqdm.tqdm(range(int(w_count))):
+            for j in range(int(h_count)):
                 sub_img = img[i * STRIDE:i * STRIDE + SIZE,j * STRIDE:j * STRIDE + SIZE,:]
                 sub_img = Image.fromarray(sub_img)
-                sub_img.save(os.path.join(test_path,'1',str(i) + '_' + str(j) + '.jpg'))
+                sub_img.save(os.path.join(test_path,img_file.strip('.png')[-1],str(i) + '_' + str(j) + '.jpg'))
 
 def fix_label():
     Image.MAX_IMAGE_PIXELS = 100000000000
     ori_path = './data/test/image_{}.png'
-    pre_path = './result/{}.png'
+    pre_path = './result_0704/{}.png'
 
     for i in [3,4]:
         ori = Image.open(ori_path.format(i))
         ori = ori.convert('RGB')
         ori = np.array(ori)
         ori = np.max(ori,axis=2)
-        ori = ori==0
+        ori[ori>0] = 1
 
         pre = Image.open(pre_path.format(i))
         pre = np.array(pre)
+        w_pad,h_pad = None,None
+        if i == 3:
+            max_w, max_h = 19968, 37376  # STRIDE = 256,SIEZ = 512
+            w_pad = (32, 33)
+            h_pad = (67, 68)
+        elif i == 4:
+            max_w, max_h = 29184, 26112  # STRIDE = 256,SIEZ = 512
+            w_pad = (176, 176)
+            h_pad = (88, 88)
+        pre = pre[w_pad[0]: -w_pad[1], h_pad[0]:-h_pad[1]]
+
 
         result = pre * ori
         result = Image.fromarray(np.uint8(result))
-        result.save('./result/fix_{}.png'.format(i))
+        result.save('./result_0704/fix_{}.png'.format(i))
 # def IOU(pred,target):
 #     #
 #     px1,py1,px2,py2 = pred
@@ -176,14 +188,23 @@ def fix_label():
 #     union = (px2 - px1) * (py2-py1) + (tx2-tx1)*(ty2-ty1) - insection
 #
 #     return union/insection
+def crop():
+    img = Image.open("./data/test/image_1.png")
+    h,w = img.size
+    cropped = img.crop((0, 0, h/2, w))  # (left, upper, right, lower)
+    cropped.save("./data/test/1_up.png")
+    del cropped
+    cropped = img.crop((0,h/2,w,h))
+    cropped.save("./data/test/1_down.png")
+
 
 
 if __name__ == '__main__':
     # train_val_split()
     # a = np.zeros(shape=(4,20000,37000),dtype=np.float32)
     # print(a.shape)
-    padding_crop()
-
+    # padding_crop()
+    fix_label()
 
 
 

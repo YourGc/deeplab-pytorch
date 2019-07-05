@@ -44,11 +44,11 @@ class Configuration():
 		self.TRAIN_GPUS = 4
 		self.TRAIN_BATCHES = 16
 		self.TRAIN_SHUFFLE = True
-		self.TRAIN_MINEPOCH = 20
+		self.TRAIN_MINEPOCH = 0
 		self.TRAIN_EPOCHS = 50
 		self.TRAIN_LOSS_LAMBDA = 0
 		self.TRAIN_TBLOG = True
-		self.TRAIN_CKPT = os.path.join(self.ROOT_DIR,'model/deeplabv3/deeplabv3plus_res101_atrous_VOC2012_epoch20.pth')
+		self.TRAIN_CKPT = None#os.path.join(self.ROOT_DIR,'model/deeplabv3/deeplabv3plus_res101_atrous_VOC2012_epoch20.pth')
 
 		self.LOG_DIR = os.path.join(self.ROOT_DIR,'log',self.EXP_NAME)
 

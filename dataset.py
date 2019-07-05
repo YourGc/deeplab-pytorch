@@ -10,7 +10,6 @@ import imgaug as ia
 from PIL import Image
 import matplotlib.pyplot as plt
 import torch
-random.seed(666)
 
 
 class DataSet(Dataset):
@@ -22,42 +21,68 @@ class DataSet(Dataset):
         self.files = self.load_file()
         # self.files = [self.files[i] for i in range(16)]
         self.cfg = cfg
-        self.aug = iaa.Sequential([
-            iaa.Fliplr(0.5),
-            iaa.Flipud(0.5)],random_state=666
-        )
         random.shuffle(self.files)
 
     def __getitem__(self, index):
         img = io.imread(os.path.join(self.img_path,self.files[index]))
         mask = io.imread(os.path.join(self.lable_path,self.files[index]))
-        # print(self.files[index])
-        # plt.imshow()
+        if self.pharse =='train':
+            img,mask = self.aug(img,mask)
         img = np.array(img)
         mask = np.array(mask)
-        # if self.cfg.DATA_AUG:
-        #     print('aug')
-        #     segmap = ia.SegmentationMapOnImage(mask, shape=mask.shape, nb_classes=cfg.MODEL_NUM_CLASSES)
-        #     self.aug.to_deterministic()
-        #     img = self.aug.augment_image(img)
-        #     mask = self.aug.augment_segmentation_maps([segmap])[0].get_arr_int().astype(np.uint8)
-        # print(mask.shape)
         mask = mask[:,:,np.newaxis]
-        if len(mask.shape) == 4: print(self.files[index])
         img = self.processing(img)
         mask = np.transpose(mask,(2,0,1))
-        # print(mask)
         img = np.transpose(img,(2,0,1))
-        # img,mask = torch.Tensor(img) ,torch.Tensor(mask)
-        #mask = self.expand_mask(mask)
-        # img = torch.Tensor(img).float()
+
+        # print(self.files[index])
         # self.visulization_from_array(img,mask)
         return img,mask
+
     def visulization_from_array(self,img,mask):
-        plt.imshow(np.transpose(img,(1,2,0)))
+        img = np.transpose(img,(1,2,0))
+        mask = np.transpose(mask,(1,2,0))
+        # R,G,B = mask.copy(),mask.copy(),mask.copy()
+        B = mask.copy()   # 蓝色通道
+        B[B == 1] = 0
+        B[B == 2] = 0
+        B[B == 3] = 255
+        B[B == 0] = 0
+
+        G = mask.copy()   # 绿色通道
+        G[G == 1] = 0
+        G[G == 2] = 255
+        G[G == 3] = 0
+        G[G == 0] = 0
+
+        R = mask.copy()   # 红色通道
+        R[R == 1] = 255
+        R[R == 2] = 0
+        R[R == 3] = 0
+        R[R == 0] = 0
+
+        vis_mask = np.dstack((R,G,B))
+        # print(vis_mask)
+        vis_mask = Image.fromarray(vis_mask)
+        vis_img = Image.fromarray(img)
+        plt.imshow(vis_img)
         plt.show()
-        plt.matshow(mask[0])
+        plt.imshow(vis_mask)
         plt.show()
+
+    def aug(self,img,mask):
+        flipper = iaa.Fliplr(0.5).to_deterministic()
+        mask = flipper.augment_image(mask)
+        img = flipper.augment_image(img)
+        vflipper = iaa.Flipud(0.5).to_deterministic()
+        img = vflipper.augment_image(img)
+        mask = vflipper.augment_image(mask)
+        if random.random() < 0.5:
+            rot_time = random.choice([1, 2, 3])
+            for i in range(rot_time):
+                img = np.rot90(img)
+                mask = np.rot90(mask)
+        return img, mask
 
     def processing(self,img):
         # print(img.shape)
@@ -71,31 +96,6 @@ class DataSet(Dataset):
         img[:, :,2] = img[:, :,2] / self.cfg.DATA_STD[2]
 
         return img
-
-    def expand_mask(self,mask):
-        # H,W = mask.shape
-        # mask = torch.Tensor(mask).long()
-        # masks = torch.Tensor(self.cfg.MODEL_NUM_CLASSES,H,W).zero_().float()
-        # masks = masks.scatter_(1, mask, 1.)
-        #print('---')
-        Tobacco,Corn,Brice = mask.copy(),mask.copy(),mask.copy()
-        # print((mask==0).sum(),(mask==1).sum(),(mask==2).sum(),(mask==3).sum())
-        Tobacco[Tobacco!=1] = 0
-        Tobacco[Tobacco==1] = 1
-
-        Corn[Corn!=2] = 0
-        Corn[Corn==2] = 1
-
-        Brice[Brice  != 3 ] = 0
-        Brice[Brice  == 3] = 1
-
-        mask[mask != 0] = 2
-        mask[mask == 0] =1
-        mask[mask == 2] = 0
-        #print(mask.sum(),Bsmoke.sum(),Corn.sum(),Brice.sum())
-        masks = np.vstack((mask,Tobacco,Corn,Brice))
-        # print(masks.sum())
-        return masks
 
     def load_file(self):
         names = None
@@ -129,10 +129,6 @@ class Test_DataSet(Dataset):
         img_name = self.imgs[index]
         img = io.imread(os.path.join(self.img_path,img_name))
         img = np.array(img)
-        # imgs = self.test_time_aug(img)
-        # imgs = [np.array(img)for img in imgs]
-        # imgs = [self.processing(img) for img in imgs]
-        # imgs = [np.transpose(img,(2,1,0)) for img in imgs]
         img = self.processing(img)
         img = np.transpose(img,(2,0,1))
         return img,img_name
@@ -168,10 +164,4 @@ if __name__ == '__main__':
                                   shuffle=False,
                                   batch_size=1,
                                   num_workers=1)
-    # train_cumtom_dataset.__getitem__(index=5)
-    # train_cumtom_dataset.__getitem__(index=16)
-    # train_cumtom_dataset.__getitem__(index=17)
-    train_cumtom_dataset.__getitem__(index=18)
-    train_cumtom_dataset.__getitem__(index=26)
     train_cumtom_dataset.__getitem__(index=27)
-    train_cumtom_dataset.__getitem__(index=28)

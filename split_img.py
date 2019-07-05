@@ -23,7 +23,7 @@ import numpy as np
 
 #read images
 Image.MAX_IMAGE_PIXELS = 100000000000
-anno_map = Image.open(r'./result/3.png')   # 注意修改img路径
+anno_map = Image.open(r'./result_0704_4/4.png')   # 注意修改img路径
 anno_map = np.asarray(anno_map)
 print(anno_map.shape)
 
@@ -48,7 +48,7 @@ R[R == 0] = 0
 
 anno_vis = np.dstack((B,G,R))
 anno_vis = cv2.resize(anno_vis, None, fx= 0.1, fy=0.1)
-cv2.imwrite('./result/3_vis.png', anno_vis)  # 注意修改 可视化label 的路径
+cv2.imwrite('./result_0704_4/4_vis.png', anno_vis)  # 注意修改 可视化label 的路径
 
 
 

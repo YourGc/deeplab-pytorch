@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 from Tools import create_dir
 from lib.net.loss import MaskLoss
 
-Image.MAX_IMAGE_PIXELS = 100000000000
+Image.MAX_IMAGE_PIXELS = None
 def test_net(args):
 
 	net = generate_net(cfg)
@@ -46,20 +46,24 @@ def test_net(args):
 			w_pad = h_pad = None
 
 			if idx == 3:
-				max_w,max_h = 78,146 #STRIDE = 256,SIEZ = 512
+				max_w,max_h = 19968,37376 #STRIDE = 256,SIEZ = 512
 				w_pad = (32, 33)
 				h_pad = (67, 68)
 			elif idx == 4:
-				max_w,max_h = 114,102 #STRIDE = 256,SIEZ = 512
+				max_w,max_h = 29184,26112 #STRIDE = 256,SIEZ = 512
 				w_pad = (176, 176)
 				h_pad = (88, 88)
+			# else :
+			# 	max_w, max_h = 93, 98   # STRIDE = 256,SIEZ = 512
+			# 	w_pad = (227, 228)
+			# 	h_pad = (17, 18)
 			test_dataset = Test_DataSet(idx = idx,cfg =cfg)
 			test_dataloader = DataLoader(test_dataset,
 									batch_size=1,
 									shuffle=False,
 									num_workers=2)
 
-			mask = np.zeros(shape=(4,max_w * STRIDE,max_h * STRIDE),dtype=np.float16)
+			mask = np.zeros(shape=(max_w,max_h),dtype=np.int8)
 			#print(mask.shape)
 			create_dir(os.path.join(args.save_dir,str(idx) + '_tmp'))
 			print("-----Test In Image {} -----".format(idx))
@@ -81,16 +85,19 @@ def test_net(args):
 				# print(result.shape,mask.shape)
 				w_idx,h_idx = str(name[0]).strip('.jpg').split('_')
 				w_idx,h_idx = int(w_idx), int(h_idx)
-				mask[:,w_idx * STRIDE:w_idx * STRIDE + SIZE ,h_idx * STRIDE:h_idx * STRIDE+SIZE] = \
-					mask[:, w_idx * STRIDE:w_idx * STRIDE + SIZE, h_idx * STRIDE:h_idx * STRIDE + SIZE] + \
-					result
+				result= np.argmax(result,axis=1)
+				# print(result)
+				# mask[:,w_idx * STRIDE:w_idx * STRIDE + SIZE ,h_idx * STRIDE:h_idx * STRIDE+SIZE] = \
+				# 	mask[:, w_idx * STRIDE:w_idx * STRIDE + SIZE, h_idx * STRIDE:h_idx * STRIDE + SIZE] + \
+				# 	result
+				mask[w_idx * SIZE:(w_idx + 1)*SIZE,h_idx * SIZE : (h_idx+1)*SIZE] = result
 				del result
 			del test_dataloader
 			del test_dataset
 			#fix mask 取均值防止重复计算
 			# mask[:,STRIDE:-STRIDE,:] /=2
 			# mask[:,:,STRIDE:-STRIDE] /= 2
-			mask = mask[:,w_pad[0] : -w_pad[1],h_pad[0]:-h_pad[1]]
+			mask = mask[w_pad[0] : -w_pad[1],h_pad[0]:-h_pad[1]]
 			#通道整合
 			# mask.tofile('mask.npy')# 以防万一
 
@@ -99,7 +106,7 @@ def test_net(args):
 			# 		mask[0,w:(w+1) * SIZE,h:(h+1)*SIZE] = np.argmax(mask[:,w:(w+1) * SIZE,h:(h+1)*SIZE],axis=0)
 			#
 			# mask = mask[0,:,:]
-			mask = np.argmax(mask,axis=0) #内存溢出
+			#mask = np.argmax(mask,axis=0) #内存溢出
 			mask = Image.fromarray(np.uint8(mask))
 			create_dir(args.save_dir)
 			mask.save(os.path.join(args.save_dir,str(idx) + '.png'))
@@ -154,7 +161,7 @@ def test_img(args):
 
 	create_dir(args.save_dir)
 	with torch.no_grad():
-		img = Image.open('33_54.jpg')
+		img = Image.open('./data/imgs/1_3114.png')
 		img = np.array(img)
 
 		def processing(img):
@@ -179,7 +186,7 @@ def test_img(args):
 		output = np.argmax(output,axis=1)
 		print(output.shape)
 		output = Image.fromarray(np.uint8(output[0]))
-		output.save(os.path.join(args.save_dir,'33_54.png'))
+		output.save(os.path.join(args.save_dir,'1_3114.png'))
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="Test")

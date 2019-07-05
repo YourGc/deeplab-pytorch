@@ -14,14 +14,9 @@ class MaskLoss(nn.Module):
 	def forward(self,output, mask):
 		#CEloss
 		B, C, H, W = output.size()
-		output = F.softmax(output,dim=1)
-		# print(output.shape)
-		# print(output[0,:,0,0])
 		output = torch.clamp(output, 1e-8, 1. - 1e-8).float()
 		masks = torch.FloatTensor(B, C, H, W).zero_().cuda()
-		# Labels = mask.view(B, 1, H, W)
 		masks = masks.scatter_(1,mask,1.)
-		# print(mask[0,:,0,0])
 		weights = torch.FloatTensor(B,C,H,W).zero_().cuda()
 		for i in range(len(self.weight)):
 			weights[:,i] = self.weight[i]
@@ -30,15 +25,16 @@ class MaskLoss(nn.Module):
 		pos_idx = masks.ge(1)
 		pos = output[pos_idx] * masks[pos_idx]
 		pos_loss = -torch.log(pos) * weights[pos_idx]
-			# print(pos_loss[0])
-			#
-		# #negtive
-		# neg_idx = mask.le(0)
-		# neg = output[neg_idx] * masks[neg_idx]
-		# neg_loss = -torch.log(1-neg)* (1 - weights[pos_idx])
-		# loss = self.alpha *pos_loss.mean() + (1-self.alpha)*neg_loss.mean()
 
-		return pos_loss.mean()
+		#negtive
+		neg_idx = masks.le(0)
+		neg = output[neg_idx] * masks[neg_idx]
+		neg_loss = -torch.log(1-neg)* (1 - weights[neg_idx])
+
+
+		loss = self.alpha *pos_loss.mean() + (1-self.alpha)*neg_loss.mean()
+
+		return loss
 		#focal loss
 		# output = F.softmax(output,dim=1)
 		# probs,classes = torch.max(output,1)

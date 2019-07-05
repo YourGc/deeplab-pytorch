@@ -9,7 +9,7 @@ import numpy as np
 import tqdm
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-
+from unet_plus import SE_Res101UNet
 from torch.autograd import Variable
 from config import cfg
 from lib.net.generateNet import generate_net
@@ -29,30 +29,20 @@ torch.backends.cudnn.benchmark = True
 def train_net():
 	train_cumtom_dataset = DataSet(pharse='train',cfg=cfg)
 	train_dataloader = DataLoader(dataset=train_cumtom_dataset,
-                            shuffle=False,
+                            shuffle=True,
                             batch_size=cfg.TRAIN_BATCHES,
                             num_workers=cfg.DATA_WORKERS)
 
 	val_cumtom_dataset = DataSet(pharse='val',cfg=cfg)
 	val_dataloader = DataLoader(dataset=val_cumtom_dataset,
-							shuffle=True,
+							shuffle=False,
 							batch_size=cfg.TEST_BATCHES,
 							num_workers=cfg.DATA_WORKERS)
 	print('train dataset : {} ,with batch size :{}'.format(len(train_cumtom_dataset),cfg.TRAIN_BATCHES))
 	print('val dataset : {} ,with batch size :{}'.format(len(val_cumtom_dataset), cfg.TEST_BATCHES))
-	# dataset = generate_dataset(cfg.DATA_NAME, cfg, 'train', cfg.DATA_AUG)
-	# dataloader = DataLoader(dataset,
-	# 			batch_size=cfg.TRAIN_BATCHES,
-	# 			shuffle=cfg.TRAIN_SHUFFLE,
-	# 			num_workers=cfg.DATA_WORKERS,
-	# 			drop_last=True)
-	
-	net = generate_net(cfg)
 
-	#net =refinenet(cfg,False)
-	#net.apply(weights_init)
-
-
+	# net = generate_net(cfg)
+	net = SE_Res101UNet(pretrained=None)
 	print('Use %d GPU'%cfg.TRAIN_GPUS)
 	device = torch.device(0)
 	if cfg.TRAIN_GPUS > 1:
@@ -67,59 +57,37 @@ def train_net():
 		pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in net_dict) and (v.shape==net_dict[k].shape)}
 		net_dict.update(pretrained_dict)
 		net.load_state_dict(net_dict)
-		# net.load_state_dict(torch.load(cfg.TRAIN_CKPT),False)
-	
+
 	criterion = MaskLoss()
-	# optimizer = optim.SGD(
-	# 	params = [
-	# 		{'params': get_params(net.module,key='1x'), 'lr': cfg.TRAIN_LR},
-	# 		{'params': get_params(net.module,key='10x'), 'lr': 10*cfg.TRAIN_LR}
-	# 	],
-	# 	momentum=cfg.TRAIN_MOMENTUM
-	# )
 	optimizer = optim.SGD(
 		lr=cfg.TRAIN_LR,
 		params = net.parameters(),
 		momentum=cfg.TRAIN_MOMENTUM,
 		weight_decay=cfg.TRAIN_WEIGHT_DECAY
 	)
-	# scheduler = optim.lr_scheduler.(optimizer,gamma=cfg.TRAIN_LR_GAMMA)
-	#scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=cfg.TRAIN_LR_MST, gamma=cfg.TRAIN_LR_GAMMA, last_epoch=-1)
-	itr = cfg.TRAIN_MINEPOCH * len(train_dataloader)
-	max_itr = cfg.TRAIN_EPOCHS * len(train_dataloader)
 	running_loss = 0.0
 
 	tblogger = SummaryWriter()
-	# print('asdas')
+
 	for epoch in range(cfg.TRAIN_MINEPOCH, cfg.TRAIN_EPOCHS):
-		# scheduler.step()
-		net.train()
 		now_lr = adjust_lr(optimizer, epoch)
 		avaliable_unions = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
 		avaliable_insections = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
 		for i, data in enumerate(train_dataloader):
 			img, mask = data
+			optimizer.zero_grad()
 			img = Variable(img).float().cuda()
 			mask = Variable(mask).long().cuda()
-			#print(mask.shape, type(mask))
-			optimizer.zero_grad()
 			output = net(img)
+			# print(output.shape)
 			loss = criterion(output, mask)
 			compute_iou(output,mask,avaliable_unions,avaliable_insections)
-
 			loss.backward()
 			optimizer.step()
 
 			cur_loss = loss.item()
-			# print(cur_loss)
-
-			# net.eval()
-			# output = net(img)
-			# eval_loss = criterion(output,mask).item()
-			# print(eval_loss)
-			# net.train()
-
 			running_loss += cur_loss
+
 			if i!=0 and i % cfg.PRINT_FRE == 0:
 				print('epoch:{}/{}\tbatch:{}/{}\tlr:{:.6f}\tloss:{:.6f}\tBsmoke:{:.6f}\tCorn:{:.6f}\tBrice:{:.6f}\tBG:{:.6f}'.format(
 					epoch, cfg.TRAIN_EPOCHS, i, len(train_dataloader),
@@ -140,7 +108,9 @@ def train_net():
 			print('%s has been saved'%save_path)
 
 		print('evalution at epoch {}'.format(epoch))
+		net.eval()
 		eval(net,val_dataloader,criterion,tblogger,epoch)
+		net.train()
 		
 	save_path = os.path.join(cfg.MODEL_SAVE_DIR,'%s_%s_%s_epoch%d_all.pth'%(cfg.MODEL_NAME,cfg.MODEL_BACKBONE,cfg.DATA_NAME,cfg.TRAIN_EPOCHS))		
 	torch.save(net.state_dict(),save_path)
@@ -150,7 +120,6 @@ def train_net():
 	print('train finished!')
 
 def eval(net,dataloader,criterion,logger,epoch):
-	net.eval()
 	val_unions = [esp for _ in range(cfg.MODEL_NUM_CLASSES)]
 	val_insections = [0.0 for _ in range(cfg.MODEL_NUM_CLASSES)]
 	val_loss = 0.0
@@ -159,12 +128,9 @@ def eval(net,dataloader,criterion,logger,epoch):
 			img, mask = data
 			img = Variable(img).float().cuda()
 			mask = Variable(mask).long().cuda()
-			# img.cuda()
-			# mask.cuda()
 			output = net(img)
 			loss = criterion(output, mask)
 			compute_iou(output,mask,val_unions,val_insections)
-			# print(loss.item())
 			val_loss += loss.item()
 
 		logger.add_scalars('loss', {'val':val_loss/len(dataloader)}, epoch)
@@ -188,7 +154,6 @@ def compute_iou(output,mask,unions,insections,num = cfg.MODEL_NUM_CLASSES):
 	masks = masks.scatter_(1, mask, 1.)
 
 	assert masks.shape == outputs.shape
-
 
 	batch_insections = torch.sum(outputs * masks,dim = (0,2,3))
 	batch_unions = torch.sum(outputs,dim=(0,2,3)) + torch.sum(masks,dim = (0,2,3)) - batch_insections
